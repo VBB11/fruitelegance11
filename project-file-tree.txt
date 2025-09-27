@@ -1,0 +1,87 @@
+.
+├── fruitsmith-backend
+│   ├── .DS_Store
+│   ├── .env
+│   ├── backend.txt
+│   ├── config
+│   │   └── db.js
+│   ├── controllers
+│   │   ├── categoryController.js
+│   │   └── productController.js
+│   ├── index.js
+│   ├── middleware
+│   │   ├── auth.js
+│   │   ├── authenticateAdmin.js
+│   │   └── authenticateToken.js
+│   ├── models
+│   │   ├── Category.js
+│   │   ├── Order.js
+│   │   ├── Products.js
+│   │   └── User.js
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── routes
+│   │   ├── auth.js
+│   │   ├── categoryRoutes.js
+│   │   ├── productRoutes.js
+│   │   └── user.js
+│   └── utils
+│       └── jwtUtils.js
+├── fruitsmith-frontend
+│   ├── .gitignore
+│   ├── README.md
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── public
+│   │   ├── favicon.ico
+│   │   ├── index.html
+│   │   ├── logo192.png
+│   │   ├── logo512.png
+│   │   ├── manifest.json
+│   │   └── robots.txt
+│   └── src
+│       ├── App.css
+│       ├── App.js
+│       ├── App.test.js
+│       ├── Login.js
+│       ├── components
+│       │   ├── AdminLayout.js
+│       │   ├── AdminNav.js
+│       │   ├── AdminRoute.js
+│       │   ├── Navbar.js
+│       │   └── ProtectedRoute.js
+│       ├── context
+│       │   ├── AuthContext.js
+│       │   └── CartContext.js
+│       ├── index.css
+│       ├── index.js
+│       ├── logo.svg
+│       ├── pages
+│       │   ├── About.js
+│       │   ├── Addresses.js
+│       │   ├── AdminProfile.js
+│       │   ├── Cart.js
+│       │   ├── Checkout.js
+│       │   ├── Favourites.js
+│       │   ├── Home.js
+│       │   ├── Login.js
+│       │   ├── Orders.js
+│       │   ├── ProductDetails.js
+│       │   ├── ProfileDashboard.js
+│       │   ├── Settings.js
+│       │   ├── Signup.js
+│       │   ├── UserProfile.js
+│       │   └── admin
+│       │       ├── Categories.js
+│       │       ├── CategoryList.js
+│       │       ├── Dashboard.js
+│       │       ├── Login.js
+│       │       ├── ProductForm.js
+│       │       └── ProductList.js
+│       ├── reportWebVitals.js
+│       ├── setupTests.js
+│       └── utils
+│           └── api.js
+└── project-file-tree.txt
+
+16 directories, 69 files
