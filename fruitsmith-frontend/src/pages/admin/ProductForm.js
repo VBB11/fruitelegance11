@@ -1,0 +1,248 @@
+import React, { useEffect, useState, useContext } from 'react';
+import axios from 'axios';
+import { useNavigate, useParams } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
+import { FaPlus, FaSpinner, FaTimesCircle, FaCheckCircle, FaUpload } from 'react-icons/fa';
+
+const backendUrl = 'http://localhost:4000';
+
+function ProductForm() {
+  const { id } = useParams(); // product id for edit, undefined for new
+  const navigate = useNavigate();
+  const { token } = useContext(AuthContext);
+
+  const [categories, setCategories] = useState([]);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    image: '',
+    price: '',
+    categoryId: '',
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  // Combined data fetching for edit and new product modes
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const categoriesRes = await axios.get(`${backendUrl}/api/admin/categories`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setCategories(categoriesRes.data.categories || categoriesRes.data || []);
+        
+        if (id) {
+          const productRes = await axios.get(`${backendUrl}/api/products/${id}`);
+          const product = productRes.data;
+          setFormData({
+            name: product.name || '',
+            description: product.description || '',
+            image: product.image || '',
+            price: product.price || '',
+            categoryId: product.categoryId?._id || product.categoryId || '',
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load data:", err);
+        setError('Failed to load product and categories data.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (token) fetchData();
+  }, [id, token]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const addCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    try {
+      const res = await axios.post(`${backendUrl}/api/admin/categories`,
+        { name: newCategoryName.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const newCat = res.data;
+      setCategories(prev => [...prev, newCat]);
+      setFormData(prev => ({ ...prev, categoryId: newCat._id }));
+      setNewCategoryName('');
+      setError('');
+    } catch (err) {
+      setError('Failed to add category. Make sure you are logged in as admin.');
+    }
+  };
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!formData.name.trim() || !formData.price || !formData.categoryId) {
+      setError('Product Name, Price, and Category are required.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const payload = { ...formData, price: Number(formData.price) };
+      if (id) {
+        await axios.put(`${backendUrl}/api/admin/products/${id}`, payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } else {
+        await axios.post(`${backendUrl}/api/admin/products`, payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+      navigate('/admin/products');
+    } catch (err) {
+      console.error('Failed to save product:', err);
+      setError('Failed to save product. Please check your inputs and try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-screen text-gray-500">
+      <FaSpinner className="animate-spin mr-3 text-3xl" /> Loading product data...
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-6 md:p-10">
+      <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-6 border-b pb-4">
+          {id ? 'Edit' : 'Add'} Product
+        </h1>
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-center space-x-2" role="alert">
+            <FaTimesCircle />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Product Name</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                placeholder="e.g., Organic Apple"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Description</label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows={4}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                placeholder="A brief description of the product"
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Image URL</label>
+              <input
+                type="url"
+                name="image"
+                value={formData.image}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                placeholder="http://example.com/image.jpg"
+              />
+              {formData.image && (
+                <div className="mt-4 border border-gray-300 rounded-lg overflow-hidden">
+                  <p className="text-sm text-gray-500 bg-gray-100 p-2 font-semibold">Image Preview:</p>
+                  <img src={formData.image} alt="Product Preview" className="w-full h-auto object-contain p-2" />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Price (INR)</label>
+              <input
+                type="number"
+                name="price"
+                value={formData.price}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                placeholder="e.g., 99.50"
+                step="0.01"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Category</label>
+              <div className="relative">
+                <select
+                  name="categoryId"
+                  value={formData.categoryId}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors appearance-none pr-10"
+                  required
+                >
+                  <option value="" disabled>Select a category</option>
+                  {categories.map(c => (
+                    <option key={c._id} value={c._id}>{c.name}</option>
+                  ))}
+                </select>
+                <FaCheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none" />
+              </div>
+              
+              <div className="flex items-center space-x-2 mt-4">
+                <input
+                  type="text"
+                  placeholder="Add new category"
+                  value={newCategoryName}
+                  onChange={e => setNewCategoryName(e.target.value)}
+                  className="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={addCategory}
+                  className="bg-green-600 text-white px-5 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center space-x-2"
+                >
+                  <FaPlus />
+                  <span>Add</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+          >
+            {saving ? (
+              <>
+                <FaSpinner className="animate-spin" />
+                <span>{id ? 'Updating...' : 'Saving...'}</span>
+              </>
+            ) : (
+              <span>{id ? 'Update Product' : 'Add Product'}</span>
+            )}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default ProductForm;
