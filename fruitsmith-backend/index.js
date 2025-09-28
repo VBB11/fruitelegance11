@@ -24,7 +24,11 @@ mongoose.connect(process.env.MONGO_URI)
 .catch(err => console.error('MongoDB connection error:', err));
 
 // Middleware setup
-app.use(cors());
+app.use(cors(allowedOrigins));
+const allowedOrigins = [
+  "https://fruitelegance.in",
+  "http://localhost:3000"
+];
 app.use(express.json());
 
 app.use((req, res, next) => {
