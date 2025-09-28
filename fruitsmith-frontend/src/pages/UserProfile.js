@@ -2,6 +2,7 @@ import React, { useEffect, useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { FaUserCircle, FaEnvelope, FaSpinner, FaExclamationCircle, FaUserPlus, FaEdit, FaLock } from 'react-icons/fa';
 import dayjs from 'dayjs';
+import config from './config/config';
 
 // Initials Avatar Component
 function InitialsAvatar({ name, size = 120, bgColor = '#4CAF50', textColor = '#fff' }) {
@@ -48,7 +49,7 @@ export default function UserProfile() {
         return;
       }
       try {
-        const response = await fetch('http://localhost:4000/api/user/profile', {
+        const response = await fetch(`${config.backendUrl}/api/user/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

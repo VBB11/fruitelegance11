@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { FaSpinner, FaTimesCircle } from 'react-icons/fa';
+import config from './config/config';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -47,7 +48,7 @@ function Login() {
     try {
       setError('');
       setLoading(true);
-      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || config.backendUrl || 'http://localhost:4000';
       const res = await axios.post(`${API_BASE_URL}/api/auth/google`, { tokenId: response.credential });
       const { token, role, user } = res.data;
 
@@ -71,7 +72,7 @@ function Login() {
     setLoading(true);
 
     try {
-      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || config.backendUrl || 'http://localhost:4000';
       const response = await axios.post(`${API_BASE_URL}/api/auth/login`, { email, password });
       const { token, role, user } = response.data;
 

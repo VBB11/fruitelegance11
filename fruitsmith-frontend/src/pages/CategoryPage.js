@@ -4,6 +4,7 @@ import { useParams, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { FaChevronLeft, FaHeart, FaRegHeart, FaEye, FaTimes } from "react-icons/fa";
 import { FaMoneyCheckAlt, FaLock, FaSeedling, FaHandshake } from "react-icons/fa";
+import config from "./config/config";
 
 const placeholderImage =
   "https://cdn.pixabay.com/photo/2016/04/01/10/07/fruit-1303048_1280.png";
@@ -165,7 +166,7 @@ const CategoryPage = () => {
     const fetchCategoryProducts = async () => {
       setLoading(true);
       try {
-        const res = await axios.get("http://localhost:4000/api/products");
+        const res = await axios.get(`${config.backendUrl}/api/products`);
         if (Array.isArray(res.data)) {
           const productsWithBadges = res.data.map((p, index) => ({
             ...p,

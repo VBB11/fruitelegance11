@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { FaSpinner, FaTimesCircle, FaSearch, FaCalendarAlt, FaFilter } from 'react-icons/fa';
+import config from '../config/config';
 
 const STATUS_OPTIONS = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Refunded'];
 
@@ -71,7 +72,7 @@ function AdminOrders({ token }) {
 
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
-      await axios.patch(`/api/admin/orders/${orderId}/status`, { status: newStatus }, {
+      await axios.patch(`${config.backendUrl}/api/admin/orders/${orderId}/status`, { status: newStatus }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOrders((prev) =>

@@ -4,6 +4,7 @@ import AdminLayout from '../../components/AdminLayout';
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import { FaPlus, FaTrash, FaSpinner, FaInfoCircle } from 'react-icons/fa';
+import config from '../config/config';
 
 const backendUrl = 'http://localhost:4000';
 
@@ -19,7 +20,7 @@ function Categories() {
       setLoading(true);
       setError('');
       try {
-        const res = await axios.get(`${backendUrl}/api/admin/categories`, {
+        const res = await axios.get(`${config.backendUrl}/api/admin/categories`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const cats = Array.isArray(res.data) ? res.data : res.data.categories || [];
@@ -42,7 +43,7 @@ function Categories() {
     setError('');
     try {
       const res = await axios.post(
-        `${backendUrl}/api/admin/categories`,
+        `${config.backendUrl}/api/admin/categories`,
         { name: newCategory.trim() },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -59,7 +60,7 @@ function Categories() {
       return;
     }
     try {
-      await axios.delete(`${backendUrl}/api/admin/categories/${id}`, {
+      await axios.delete(`${config.backendUrl}/api/admin/categories/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCategories((prev) => prev.filter((cat) => cat._id !== id));

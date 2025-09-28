@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { FaBoxOpen, FaSpinner, FaTimesCircle, FaRegSadTear, FaCheckCircle, FaTruck, FaClipboardList, FaBox, FaHome } from "react-icons/fa";
 import { AuthContext } from "../context/AuthContext";
 import dayjs from "dayjs";
+import config from "./config/config";
 
 const placeholderImage = "https://cdn.pixabay.com/photo/2016/04/01/10/07/fruit-1303048_1280.png";
 
@@ -84,7 +85,7 @@ export default function Orders() {
       }
       try {
         setError("");
-        const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000";
+        const API_URL = process.env.REACT_APP_API_URL || config.backendUrl || 'http://localhost:4000';
         const response = await axios.get(`${API_URL}/api/orders`, {
           headers: { Authorization: `Bearer ${token}` },
         });

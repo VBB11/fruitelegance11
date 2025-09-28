@@ -6,6 +6,7 @@ import { FaHeart, FaRegHeart, FaEye, FaTimes, FaSeedling, FaHandshake, FaMoneyCh
 import { useCart } from "../context/CartContext";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import config from "./config/config";
 
 const placeholderImage =
   "https://cdn.pixabay.com/photo/2016/04/01/10/07/fruit-1303048_1280.png";
@@ -256,7 +257,7 @@ export default function Home() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:4000/api/products")
+      .get(`${config.backendUrl}/api/products`)
       .then((res) => {
         if (Array.isArray(res.data)) {
           const productsWithBadges = res.data.map((p, index) => ({

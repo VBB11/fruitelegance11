@@ -1,5 +1,5 @@
 // productController.js
-const Product = require('../models/products');
+const Product = require('../models/Products.js');
 
 // Get all products (public) with an optional category filter
 exports.getProducts = async (req, res) => {
@@ -49,7 +49,7 @@ exports.getProductsAdmin = async (req, res) => {
 // Add a new product
 exports.addProduct = async (req, res) => {
   try {
-    const { name, categoryId, price, description, image } = req.body;
+    const { name, categoryId, price, description, images } = req.body;
 
     if (!name || !categoryId || !price) {
       return res.status(400).json({ error: 'Name, categoryId, and price are required.' });
@@ -60,7 +60,7 @@ exports.addProduct = async (req, res) => {
       categoryId,
       price,
       description: description?.trim() || '',
-      image: image?.trim() || '',
+      images: Array.isArray(images) ? images : images ? [images] : [],
     });
 
     const savedProduct = await newProduct.save();
@@ -71,6 +71,7 @@ exports.addProduct = async (req, res) => {
   }
 };
 
+
 // Update a product
 exports.updateProduct = async (req, res) => {
   const productId = req.params.id;
@@ -79,7 +80,11 @@ exports.updateProduct = async (req, res) => {
 
     if (updateData.name) updateData.name = updateData.name.trim();
     if (updateData.description) updateData.description = updateData.description.trim();
-    if (updateData.image) updateData.image = updateData.image.trim();
+    if (updateData.images) {
+      updateData.images = Array.isArray(updateData.images)
+        ? updateData.images
+        : [updateData.images];
+    }
 
     const updatedProduct = await Product.findByIdAndUpdate(productId, updateData, { new: true });
 

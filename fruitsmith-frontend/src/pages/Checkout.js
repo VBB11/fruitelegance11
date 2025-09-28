@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useCart } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { FaChevronLeft, FaMapMarkerAlt, FaWallet, FaCheckCircle } from 'react-icons/fa';
+import config from './config/config';
 
 const placeholderImage =
   "https://cdn.pixabay.com/photo/2016/04/01/10/07/fruit-1303048_1280.png";
@@ -89,7 +90,7 @@ function Checkout() {
       }
       
       const createOrderRes = await axios.post(
-        'http://localhost:4000/api/payment/create-order',
+        `${config.backendUrl}/api/payment/create-order`,
         { cart },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -99,7 +100,7 @@ function Checkout() {
       const paymentResult = await openRazorpay(orderId, amount, key);
       
       await axios.post(
-        'http://localhost:4000/api/orders',
+        `${config.backendUrl}/api/orders`,
         {
           cart,
           shippingAddress: address,

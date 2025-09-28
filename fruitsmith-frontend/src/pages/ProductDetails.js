@@ -4,7 +4,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { FaChevronLeft, FaHeart, FaRegHeart, FaRulerCombined, FaTag, FaTruck, FaClock, FaStar, FaStarHalfAlt, FaGift, FaMoneyBillWave, FaTruckLoading, FaCalendarCheck, FaBoxes, FaLeaf, FaSeedling } from "react-icons/fa";
 import { RiSecurePaymentLine, RiMistLine } from "react-icons/ri";
 import { useCart } from "../context/CartContext";
-
+import config from '../../src/pages/config/config';
 const placeholderImage =
   "https://cdn.pixabay.com/photo/2016/04/01/10/07/fruit-1303048_1280.png";
 
@@ -53,10 +53,10 @@ const ProductDetailPage = () => {
     const fetchProductAndOthers = async () => {
       setLoading(true);
       try {
-        const productRes = await axios.get(`http://localhost:4000/api/products/${id}`);
+        const productRes = await axios.get(`${config.backendUrl}/api/products/${id}`);
         setProduct(productRes.data);
 
-        const allProductsRes = await axios.get("http://localhost:4000/api/products");
+        const allProductsRes = await axios.get(`${config.backendUrl}/api/products`);
         const filteredOthers = allProductsRes.data
           .filter((p) => p._id !== id)
           .sort(() => 0.5 - Math.random())

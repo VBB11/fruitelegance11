@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import { FaArrowLeft, FaSpinner, FaBoxOpen } from "react-icons/fa";
+import config from "../config/config";
 
 function AdminOrderDetail({ token }) {
   const { orderId } = useParams();
@@ -13,7 +14,7 @@ function AdminOrderDetail({ token }) {
     async function fetchOrder() {
       setLoading(true);
       try {
-        const res = await axios.get(`/api/admin/orders/${orderId}`, {
+        const res = await axios.get(`${config.backendUrl}/api/admin/orders/${orderId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setOrder(res.data);  // Changed here: backend sends the order directly

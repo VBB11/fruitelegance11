@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaLeaf, FaShippingFast, FaCheckCircle, FaUsers, FaPhone, FaEnvelope, FaMapMarkerAlt } from 'react-icons/fa';
 
+
 const fruitImageUrl = 'https://images.pexels.com/photos/1132047/pexels-photo-1132047.jpeg';
 
 const commitments = [

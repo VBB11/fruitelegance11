@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { FaSpinner, FaCheckCircle, FaTimesCircle, FaLock } from 'react-icons/fa';
+import config from './config/config';
 
 function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -47,7 +48,7 @@ function ResetPassword() {
 
     setLoading(true);
     try {
-      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || config.backendUrl || 'http://localhost:4000';
       const response = await axios.post(`${API_BASE_URL}/api/auth/reset-password`, {
         token,
         newPassword,

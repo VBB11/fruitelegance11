@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { FaHeart, FaRegHeart, FaSpinner, FaBoxOpen, FaExclamationCircle } from 'react-icons/fa';
+import config from './config/config';
 
 const placeholderImage = "https://cdn.pixabay.com/photo/2016/04/01/10/07/fruit-1303048_1280.png";
 
@@ -15,7 +16,7 @@ export default function Favourites() {
     async function fetchProducts() {
       setLoading(true);
       try {
-        const res = await axios.get('http://localhost:4000/api/products');
+        const res = await axios.get(`${config.backendUrl}/api/products`);
         setProducts(res.data);
         setError('');
       } catch (err) {

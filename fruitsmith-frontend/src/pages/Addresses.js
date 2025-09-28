@@ -3,6 +3,7 @@ import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { FaPlus, FaPencilAlt, FaTrashAlt, FaMapMarkerAlt, FaChevronLeft, FaTimesCircle } from 'react-icons/fa';
+import config from './config/config';
 
 function Addresses() {
   const { token, user } = useContext(AuthContext);
@@ -33,7 +34,7 @@ function Addresses() {
       setLoading(true);
       setError('');
       try {
-        const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000';
+        const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || config.backendUrl || 'http://localhost:4000';
         const res = await axios.get(`${API_BASE_URL}/api/user/addresses`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -78,7 +79,7 @@ function Addresses() {
     setError('');
     setIsSubmitting(true);
     try {
-      const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000';
+      const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || config.backendUrl || 'http://localhost:4000';
       const res = await axios.post(`${API_BASE_URL}/api/user/addresses`, newAddress, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -100,7 +101,7 @@ function Addresses() {
     setError('');
     setIsSubmitting(true);
     try {
-      const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000';
+      const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || config.backendUrl || 'http://localhost:4000';
       const res = await axios.put(`${API_BASE_URL}/api/user/addresses/${editingAddressId}`, newAddress, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -118,7 +119,7 @@ function Addresses() {
     
     setError('');
     try {
-      const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000';
+      const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || config.backendUrl || 'http://localhost:4000';
       await axios.delete(`${API_BASE_URL}/api/user/addresses/${addressId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });

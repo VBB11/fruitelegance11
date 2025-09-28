@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import { FaUserCircle, FaHeart, FaClipboardList, FaMapMarkerAlt, FaCog, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
 
+
 // Array of navigation items for easy management and scalability
 const navItems = [
   { name: 'Profile', path: '/profile', icon: <FaUserCircle /> },

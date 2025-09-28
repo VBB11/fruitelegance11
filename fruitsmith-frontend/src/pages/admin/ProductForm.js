@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { FaPlus, FaSpinner, FaTimesCircle, FaCheckCircle, FaUpload } from 'react-icons/fa';
+import config from '../config/config';
 
 const backendUrl = 'http://localhost:4000';
 
@@ -30,13 +31,13 @@ function ProductForm() {
       setLoading(true);
       setError('');
       try {
-        const categoriesRes = await axios.get(`${backendUrl}/api/admin/categories`, {
+        const categoriesRes = await axios.get(`${config.backendUrl}/api/admin/categories`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCategories(categoriesRes.data.categories || categoriesRes.data || []);
         
         if (id) {
-          const productRes = await axios.get(`${backendUrl}/api/products/${id}`);
+          const productRes = await axios.get(`${config.backendUrl}/api/products/${id}`);
           const product = productRes.data;
           setFormData({
             name: product.name || '',
@@ -64,7 +65,7 @@ function ProductForm() {
   const addCategory = async () => {
     if (!newCategoryName.trim()) return;
     try {
-      const res = await axios.post(`${backendUrl}/api/admin/categories`,
+      const res = await axios.post(`${config.backendUrl}/api/admin/categories`,
         { name: newCategoryName.trim() },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -91,11 +92,11 @@ function ProductForm() {
     try {
       const payload = { ...formData, price: Number(formData.price) };
       if (id) {
-        await axios.put(`${backendUrl}/api/admin/products/${id}`, payload, {
+        await axios.put(`${config.backendUrl}/api/admin/products/${id}`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
       } else {
-        await axios.post(`${backendUrl}/api/admin/products`, payload, {
+        await axios.post(`${config.backendUrl}/api/admin/products`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }

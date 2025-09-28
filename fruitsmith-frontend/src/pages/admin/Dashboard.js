@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AdminNav from '../../components/AdminNav';
 import axios from 'axios';
+import config from '../config/config';
 
 function Dashboard() {
   const [stats, setStats] = useState({ categories: 0, products: 0, orders: 0 });
@@ -13,9 +14,9 @@ function Dashboard() {
       setLoading(true);
       try {
         const [catRes, prodRes, orderRes] = await Promise.all([
-          axios.get('http://localhost:4000/api/categories'),
-          axios.get('http://localhost:4000/api/products'),
-          axios.get('http://localhost:4000/api/admin/orders', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
+          axios.get(`${config.backendUrl}/api/categories`),
+          axios.get(`${config.backendUrl}/api/products`),
+          axios.get(`${config.backendUrl}/api/admin/orders`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
         ]);
 
         const categoriesCount = Array.isArray(catRes.data.categories) ? catRes.data.categories.length :

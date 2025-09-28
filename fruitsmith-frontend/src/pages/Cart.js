@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import axios from 'axios';
 import { FaPlus, FaMinus, FaTrashAlt, FaMapMarkerAlt, FaCheckCircle, FaChevronLeft, FaShippingFast, FaExclamationCircle } from 'react-icons/fa';
+import config from './config/config';
 
 const placeholderImage =
   "https://cdn.pixabay.com/photo/2016/04/01/10/07/fruit-1303048_1280.png";
@@ -27,7 +28,7 @@ function Cart() {
           setLoading(false);
           return;
         }
-        const res = await axios.get('http://localhost:4000/api/user/addresses', {
+        const res = await axios.get(`${config.backendUrl}/api/user/addresses`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 

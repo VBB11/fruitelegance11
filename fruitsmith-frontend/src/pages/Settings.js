@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
+
 function Settings() {
   // Load saved theme or default to light
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');

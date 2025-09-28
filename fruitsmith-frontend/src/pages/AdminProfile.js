@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import config from './config/config';
 
 function AdminProfile() {
   const [adminInfo, setAdminInfo] = useState(null);
@@ -13,7 +14,7 @@ function AdminProfile() {
       }
 
       try {
-        const res = await fetch('/api/admin/profile', {
+        const res = await fetch(`${config.backendUrl}/api/admin/profile`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) {

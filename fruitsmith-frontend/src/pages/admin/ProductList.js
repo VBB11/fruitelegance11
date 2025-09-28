@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import { FaEdit, FaTrash, FaPlus, FaSpinner, FaTimesCircle, FaSearch } from "react-icons/fa";
+import config from "../config/config";
 
 const backendUrl = "http://localhost:4000";
 
@@ -41,12 +42,12 @@ function ProductList() {
       }
       const queryString = query.length ? `?${query.join("&")}` : "";
 
-      const productsRes = await axios.get(`${backendUrl}/api/admin/products${queryString}`, {
+      const productsRes = await axios.get(`${config.backendUrl}/api/admin/products${queryString}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProducts(productsRes.data.products || productsRes.data || []);
-      
-      const categoriesRes = await axios.get(`${backendUrl}/api/admin/categories`, {
+
+      const categoriesRes = await axios.get(`${config.backendUrl}/api/admin/categories`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCategories(categoriesRes.data.categories || categoriesRes.data || []);
@@ -68,7 +69,7 @@ function ProductList() {
 
     setDeletingId(id);
     try {
-      await axios.delete(`${backendUrl}/api/admin/products/${id}`, {
+      await axios.delete(`${config.backendUrl}/api/admin/products/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProducts(products.filter(p => p._id !== id));

@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import { FaArrowLeft, FaSpinner, FaBoxOpen } from "react-icons/fa";
 import { AuthContext } from "../context/AuthContext";
+import config from "./config/config";
 
 const placeholderImage = "https://cdn.pixabay.com/photo/2016/04/01/10/07/fruit-1303048_1280.png";
 
@@ -17,7 +18,7 @@ function OrderDetail() {
     async function fetchOrder() {
       setLoading(true);
       try {
-        const res = await axios.get(`/api/orders/${orderId}`, {
+        const res = await axios.get(`${config.backendUrl}/api/orders/${orderId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setOrder(res.data);

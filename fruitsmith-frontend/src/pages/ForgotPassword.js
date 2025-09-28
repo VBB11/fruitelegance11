@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { FaSpinner, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import config from './config/config';
 
 function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -16,7 +17,7 @@ function ForgotPassword() {
     setLoading(true);
 
     try {
-      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || config.backendUrl || 'http://localhost:4000';
       const response = await axios.post(`${API_BASE_URL}/api/auth/forgot-password`, { email });
       setMessage(response.data.message || 'Email sent with password reset instructions');
     } catch (err) {
