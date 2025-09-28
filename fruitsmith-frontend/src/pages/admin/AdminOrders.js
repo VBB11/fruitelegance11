@@ -54,7 +54,7 @@ function AdminOrders({ token }) {
         query.push(`page=${page}`, 'limit=20');
         const queryString = query.length ? `?${query.join('&')}` : '';
         
-        const res = await axios.get(`/api/admin/orders${queryString}`, {
+        const res = await axios.get(`${config.backendUrl}/api/admin/orders${queryString}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
