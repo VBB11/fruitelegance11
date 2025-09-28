@@ -22,13 +22,12 @@ const port = process.env.PORT || 4000;
 mongoose.connect(process.env.MONGO_URI)
 .then(() => console.log('MongoDB connected'))
 .catch(err => console.error('MongoDB connection error:', err));
-
-// Middleware setup
-app.use(cors(allowedOrigins));
 const allowedOrigins = [
   "https://fruitelegance.in",
   "http://localhost:3000"
 ];
+// Middleware setup
+app.use(cors(allowedOrigins));
 app.use(express.json());
 
 app.use((req, res, next) => {
