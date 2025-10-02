@@ -27,6 +27,7 @@ mongoose
 // Proper CORS configuration (array of allowed origins)
 const allowedOrigins = [
   'https://fruitelegance.in',
+  'https://app.fruitelegance.in',
   'http://localhost:3000',
 ];
 
