@@ -16,21 +16,21 @@ const banners = [
     id: 1,
     img: "https://deq64r0ss2hgl.cloudfront.net/images/product/dry-fruits-gift-boxes-hampers-14465093981690.png",
     title: "Luxury Hampers for a Brighter Diwali",
-    label: "Luxury Hampers",
+    label: "Shop Now",
     link: "/category/diwali",
   },
   {
     id: 2,
     img: "https://www.fruitsmith.com/pub/media/wysiwyg/wcg-25-11.jpg",
     title: "Fresh Juicy Fruits",
-    label: "Fresh Fruits",
+    label: "Explore",
     link: "/category/fruits",
   },
   {
     id: 3,
     img: "https://www.fruitsmith.com/pub/media/wysiwyg/dw-25-2.jpg",
     title: "Healthy Combos",
-    label: "Healthy Combos",
+    label: "Get Yours",
     link: "/category/combos",
   },
 ];
@@ -77,20 +77,20 @@ const whyChooseUsFeatures = [
 
 function Categories({ selectedCategory, onSelectCategory }) {
   return (
-    <section className="max-w-7xl mx-auto rounded-3xl bg-white shadow-md py-10 px-6 my-12 relative z-30">
-      <h2 className="text-3xl font-extrabold mb-6 text-gray-900">Categories</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6">
+    <section className="max-w-7xl mx-auto rounded-2xl bg-white shadow-md py-8 px-4 sm:px-6 my-10 relative z-30">
+      <h2 className="text-2xl sm:text-3xl font-extrabold mb-6 text-gray-900 text-center">Shop by Category</h2>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 sm:gap-6">
         {categories.map(({ label, image, bg }) => (
           <button
             key={label}
             onClick={() => onSelectCategory(selectedCategory === label ? null : label)}
-            className={`flex flex-col items-center rounded-xl ${bg} p-5 cursor-pointer transition ${
+            className={`flex flex-col items-center rounded-xl ${bg} p-3 sm:p-5 cursor-pointer transition ${
               selectedCategory === label ? "ring ring-green-400 ring-offset-2" : "hover:shadow-xl"
             }`}
             aria-pressed={selectedCategory === label}
           >
-            <img src={image} alt={label} className="w-16 h-16 mb-2 object-contain" loading="lazy" />
-            <span className="text-center font-medium">{label}</span>
+            <img src={image} alt={label} className="w-12 h-12 sm:w-16 sm:h-16 mb-2 object-contain" loading="lazy" />
+            <span className="text-center text-sm sm:text-base font-medium">{label}</span>
           </button>
         ))}
       </div>
@@ -102,7 +102,7 @@ const QuickViewModal = ({ product, onClose, handleAdd }) => {
   if (!product) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-800 bg-opacity-75">
-      <div className="bg-white rounded-3xl p-8 max-w-2xl w-full mx-4 shadow-lg relative">
+      <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full mx-4 shadow-lg relative">
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition">
           <FaTimes size={24} />
         </button>
@@ -110,9 +110,9 @@ const QuickViewModal = ({ product, onClose, handleAdd }) => {
           <div className="flex-1 flex items-center justify-center">
             <img src={product.image || placeholderImage} alt={product.name} className="w-full h-auto max-h-64 object-contain" />
           </div>
-          <div className="flex-1 flex flex-col justify-center">
-            <h3 className="text-2xl font-extrabold text-green-800 mb-2">{product.name}</h3>
-            <p className="text-xl font-semibold text-green-900 mb-4">₹{product.price}</p>
+          <div className="flex-1 flex flex-col justify-center text-center md:text-left">
+            <h3 className="text-xl sm:text-2xl font-extrabold text-green-800 mb-2">{product.name}</h3>
+            <p className="text-lg sm:text-xl font-semibold text-green-900 mb-4">₹{product.price}</p>
             <p className="text-gray-600 mb-4 line-clamp-3">{product.description}</p>
             <button onClick={() => handleAdd(product)} className="bg-green-800 text-white rounded-full py-3 font-semibold hover:bg-green-900 transition-colors">
               Add to Cart
@@ -145,18 +145,18 @@ const ProductCard = ({ product, getQuantity, handleAdd, handleRemove, toggleFavo
       <button
         aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
         onClick={() => toggleFavorite(product._id)}
-        className="absolute top-5 right-5 z-10 text-red-600 hover:text-red-700 transition-colors"
+        className="absolute top-4 right-4 z-10 text-red-600 hover:text-red-700 transition-colors"
       >
         {isFavorite ? <FaHeart size={24} /> : <FaRegHeart size={24} />}
       </button>
 
       {isNew && (
-        <span className="absolute top-5 left-5 z-10 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+        <span className="absolute top-4 left-4 z-10 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
           New
         </span>
       )}
       {isBestSeller && (
-        <span className="absolute top-5 left-5 z-10 bg-yellow-500 text-gray-900 text-xs font-bold px-3 py-1 rounded-full">
+        <span className="absolute top-4 left-4 z-10 bg-yellow-500 text-gray-900 text-xs font-bold px-3 py-1 rounded-full">
           Best Seller
         </span>
       )}
@@ -164,26 +164,26 @@ const ProductCard = ({ product, getQuantity, handleAdd, handleRemove, toggleFavo
       {isHovering && (
         <button
           onClick={() => onQuickView(product)}
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 bg-white text-green-800 px-4 py-2 rounded-full font-semibold shadow-lg hover:bg-gray-100 transition"
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 bg-white text-green-800 px-4 py-2 rounded-full font-semibold shadow-lg hover:bg-gray-100 transition hidden md:block"
         >
           <FaEye className="inline-block mr-2" /> Quick View
         </button>
       )}
 
-      <Link to={`/product/${product._id}`} className="block p-5 pt-10 flex-grow">
+      <Link to={`/product/${product._id}`} className="block p-4 pt-8 flex-grow">
         <img
           src={product.image || placeholderImage}
           alt={product.name}
-          className="w-full h-52 object-contain rounded-3xl mb-4"
+          className="w-full h-36 sm:h-52 object-contain rounded-3xl mb-4"
           loading="lazy"
         />
-        <h3 className="text-2xl font-bold text-green-800 text-center">
+        <h3 className="text-xl sm:text-2xl font-bold text-green-800 text-center">
           {product.name}
         </h3>
         <p className="text-center text-gray-600 mt-2 line-clamp-3">
           {product.description}
         </p>
-        <p className="text-center text-green-900 text-xl font-extrabold mt-3">
+        <p className="text-center text-green-900 text-lg sm:text-xl font-extrabold mt-3">
           ₹{product.price}
         </p>
       </Link>
@@ -191,7 +191,7 @@ const ProductCard = ({ product, getQuantity, handleAdd, handleRemove, toggleFavo
       {qty === 0 ? (
         <button
           onClick={() => handleAdd(product)}
-          className="bg-green-800 text-white rounded-b-3xl py-4 font-semibold hover:bg-green-900 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+          className="bg-green-800 text-white rounded-b-3xl py-3 font-semibold hover:bg-green-900 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
         >
           Add to Cart
         </button>
@@ -315,7 +315,6 @@ export default function Home() {
     setTimeout(() => setPopup(null), 1500);
   };
   
-  // FIX: This function now dispatches the correct DECREMENT_QTY action.
   const handleRemove = (productId) => {
     const itemInCart = cart.find(item => item._id === productId);
     if (!itemInCart) {
@@ -323,7 +322,6 @@ export default function Home() {
         setTimeout(() => setPopup(null), 1500);
         return;
     }
-    // Correctly dispatching DECREMENT_QTY with the product ID
     dispatch({ type: "DECREMENT_QTY", payload: productId });
     setPopup(`Removed one "${itemInCart.name}" from cart`);
     setTimeout(() => setPopup(null), 1500);
@@ -358,33 +356,41 @@ export default function Home() {
     dots: true,
     infinite: true,
     autoplay: true,
-    autoplaySpeed: 2000,
+    autoplaySpeed: 3000,
     speed: 800,
     slidesToShow: 1,
     slidesToScroll: 1,
-    arrows: true,
+    arrows: false,
     pauseOnHover: true,
+    responsive: [
+      {
+        breakpoint: 768, // md
+        settings: {
+          arrows: false
+        }
+      }
+    ]
   };
 
   return (
-    <div className="relative bg-[#f9f1dd] min-h-screen select-none">
+    <div className="relative bg-[#f9f1dd] min-h-screen select-none overflow-x-hidden">
       {/* Banner */}
-      <section className="shadow-lg bg-white w-full mb-12">
+      <section className="shadow-lg bg-white w-full mb-10">
         <Slider {...sliderSettings} className="w-screen relative z-20">
           {banners.map(({ id, img, title, label, link }) => (
             <Link
               to={link}
               key={id}
-              className="block relative cursor-pointer text-white rounded-lg overflow-hidden"
+              className="block relative cursor-pointer text-white overflow-hidden"
             >
               <img
                 src={img}
                 alt={title}
-                className="w-full h-screen object-cover brightness-90 hover:brightness-110 transition"
+                className="w-full h-96 md:h-[60vh] lg:h-screen object-cover brightness-90 transition"
               />
-              <div className="absolute bottom-20 left-20 max-w-lg">
-                <h2 className="text-6xl font-extrabold drop-shadow-xl">{title}</h2>
-                <span className="mt-4 inline-block bg-yellow-300 rounded-full px-8 py-3 text-yellow-900 font-semibold text-2xl cursor-pointer hover:bg-yellow-400 transition">
+              <div className="absolute bottom-10 left-5 sm:bottom-20 sm:left-20 max-w-xs sm:max-w-lg">
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold drop-shadow-xl">{title}</h2>
+                <span className="mt-4 inline-block bg-yellow-300 rounded-full px-4 sm:px-8 py-2 sm:py-3 text-yellow-900 font-semibold text-sm sm:text-lg md:text-2xl cursor-pointer hover:bg-yellow-400 transition">
                   {label}
                 </span>
               </div>
@@ -404,24 +410,24 @@ export default function Home() {
       />
 
       {/* Products Header */}
-      <h1 className="text-4xl font-extrabold text-green-800 my-10 text-center">
-        Fruit Elegance Products
+      <h1 className="text-3xl sm:text-4xl font-extrabold text-green-800 my-8 text-center">
+        Our Fresh Products
       </h1>
 
       {/* Enhanced Filter Controls */}
-      <div className="max-w-7xl mx-auto px-8 mb-10">
-        <div className="bg-white rounded-2xl shadow-md p-6 relative z-30">
-          <div className="flex flex-wrap justify-center gap-4 mb-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+        <div className="bg-white rounded-2xl shadow-md p-4 sm:p-6 relative z-30">
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-4 sm:mb-6">
             {/* Price Filters */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Price Range:</label>
+              <label className="text-sm font-medium text-gray-700">Price:</label>
               <input
                 type="number"
                 placeholder="Min ₹"
                 min="0"
                 value={minPrice}
                 onChange={(e) => setMinPrice(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 w-24 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                className="border border-gray-300 rounded-lg px-2 py-1 w-20 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
                 aria-label="Minimum price filter"
               />
               <span className="text-gray-500">-</span>
@@ -431,7 +437,7 @@ export default function Home() {
                 min="0"
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 w-24 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                className="border border-gray-300 rounded-lg px-2 py-1 w-20 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
                 aria-label="Maximum price filter"
               />
             </div>
@@ -439,7 +445,7 @@ export default function Home() {
             {/* Favorites Toggle */}
             <button
               onClick={() => setShowFavorites(!showFavorites)}
-              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+              className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-semibold transition-all ${
                 showFavorites
                   ? "bg-red-500 text-white shadow-lg shadow-red-200"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -452,15 +458,15 @@ export default function Home() {
             <button
               type="button"
               onClick={resetFilters}
-              className="bg-red-500 text-white px-5 py-2 rounded-lg hover:bg-red-600 transition-colors font-semibold"
+              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-semibold text-sm sm:text-base"
             >
-              Reset Filters
+              Reset
             </button>
           </div>
 
           {/* Active Filters Display */}
           {(selectedCategory || minPrice || maxPrice || showFavorites) && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 justify-center">
               <span className="text-sm text-gray-600">Active filters:</span>
               {selectedCategory && (
                 <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
@@ -488,7 +494,7 @@ export default function Home() {
       </div>
 
       {/* Results Count */}
-      <div className="max-w-7xl mx-auto px-8 mb-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
         <p className="text-center text-gray-600">
           Showing {displayedProducts.length} of {products.length} products
         </p>
@@ -496,13 +502,13 @@ export default function Home() {
 
       {/* Popup Notification */}
       {popup && (
-        <div className="fixed top-20 right-6 bg-green-700 text-white px-6 py-3 rounded-lg z-50 shadow-lg animate-fadeinout">
+        <div className="fixed top-20 right-4 sm:right-6 bg-green-700 text-white px-4 py-2 rounded-lg z-50 shadow-lg animate-fadeinout">
           {popup}
         </div>
       )}
 
       {/* Products Grid */}
-      <section className="max-w-7xl mx-auto px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 relative z-30">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 relative z-30">
         {displayedProducts.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <p className="text-gray-600 text-lg mb-4">
@@ -535,8 +541,8 @@ export default function Home() {
         )}
       </section>
 
-      {/* "Why Choose Us" Section - Moved to a better position */}
-      <section className="max-w-7xl mx-auto rounded-3xl bg-white shadow-md py-10 px-6 my-12 relative z-30">
+      {/* "Why Choose Us" Section */}
+      <section className="max-w-7xl mx-auto rounded-2xl bg-white shadow-md py-10 px-6 sm:px-8 my-10 relative z-30">
         <h2 className="text-3xl font-extrabold mb-8 text-gray-900 text-center">
           Why Choose Fruit Elegance?
         </h2>
@@ -557,45 +563,25 @@ export default function Home() {
       </section>
 
       {/* Quick View Modal */}
-      {/* Note: FaTimes icon is not defined, will use a simple X */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-800 bg-opacity-75"
-           style={{ display: quickViewProduct ? 'flex' : 'none' }}>
-        <div className="bg-white rounded-3xl p-8 max-w-2xl w-full mx-4 shadow-lg relative">
-          <button onClick={() => setQuickViewProduct(null)} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition">
-            <span className="text-2xl font-bold">×</span>
-          </button>
-          {quickViewProduct && (
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="flex-1 flex items-center justify-center">
-                <img src={quickViewProduct.image || placeholderImage} alt={quickViewProduct.name} className="w-full h-auto max-h-64 object-contain" />
-              </div>
-              <div className="flex-1 flex flex-col justify-center">
-                <h3 className="text-2xl font-extrabold text-green-800 mb-2">{quickViewProduct.name}</h3>
-                <p className="text-xl font-semibold text-green-900 mb-4">₹{quickViewProduct.price}</p>
-                <p className="text-gray-600 mb-4 line-clamp-3">{quickViewProduct.description}</p>
-                <button onClick={() => { handleAdd(quickViewProduct); setQuickViewProduct(null); }} className="bg-green-800 text-white rounded-full py-3 font-semibold hover:bg-green-900 transition-colors">
-                  Add to Cart
-                </button>
-                <Link to={`/product/${quickViewProduct._id}`} className="mt-2 text-center text-green-700 hover:underline">
-                  View Full Details
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {quickViewProduct && (
+        <QuickViewModal
+          product={quickViewProduct}
+          onClose={() => setQuickViewProduct(null)}
+          handleAdd={handleAdd}
+        />
+      )}
 
       {/* Footer */}
       <footer className="bg-green-900 text-white mt-16 relative z-30">
-        <div className="max-w-7xl mx-auto px-8 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-2xl font-bold text-yellow-300 mb-4">Fruit Elegance</h3>
-              <p className="text-green-100 mb-4 leading-relaxed">
+              <h3 className="text-xl font-bold text-yellow-300 mb-4">Fruit Elegance</h3>
+              <p className="text-green-100 mb-4 leading-relaxed text-sm">
                 Your trusted partner for fresh, premium quality fruits. We deliver nature's finest 
                 directly to your doorstep with love and care.
               </p>
-              <div className="flex items-center gap-2 text-green-100">
+              <div className="flex items-center gap-2 text-green-100 text-sm">
                 <span>🌟</span>
                 <span>Premium Quality Since 2020</span>
               </div>
@@ -603,7 +589,7 @@ export default function Home() {
 
             <div>
               <h4 className="text-lg font-semibold text-yellow-300 mb-4">Quick Links</h4>
-              <ul className="space-y-2">
+              <ul className="space-y-2 text-sm">
                 <li><Link to="/about" className="text-green-100 hover:text-yellow-300 transition-colors">About Us</Link></li>
                 <li><Link to="/products" className="text-green-100 hover:text-yellow-300 transition-colors">All Products</Link></li>
                 <li><Link to="/categories" className="text-green-100 hover:text-yellow-300 transition-colors">Categories</Link></li>
@@ -613,7 +599,7 @@ export default function Home() {
 
             <div>
               <h4 className="text-lg font-semibold text-yellow-300 mb-4">Customer Service</h4>
-              <ul className="space-y-2">
+              <ul className="space-y-2 text-sm">
                 <li><Link to="/contact" className="text-green-100 hover:text-yellow-300 transition-colors">Contact Us</Link></li>
                 <li><Link to="/faq" className="text-green-100 hover:text-yellow-300 transition-colors">FAQ</Link></li>
                 <li><Link to="/shipping" className="text-green-100 hover:text-yellow-300 transition-colors">Shipping Info</Link></li>
@@ -624,7 +610,7 @@ export default function Home() {
 
             <div>
               <h4 className="text-lg font-semibold text-yellow-300 mb-4">Get In Touch</h4>
-              <div className="space-y-3 text-green-100">
+              <div className="space-y-3 text-green-100 text-sm">
                 <div className="flex items-center gap-2">
                   <span>📞</span>
                   <span>+91 98765 43210</span>
@@ -646,66 +632,41 @@ export default function Home() {
           </div>
 
           <div className="border-t border-green-800 pt-8 mt-8">
-            <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
+            <div className="flex flex-col lg:flex-row justify-between items-center gap-8">
               <div>
-                <h4 className="text-lg font-semibold text-yellow-300 mb-3">We Accept</h4>
-                <div className="flex items-center gap-3">
-                  <img
-                    src="https://cdn.worldvectorlogo.com/logos/visa-10.svg"
-                    alt="Visa"
-                    className="h-8"
-                  />
-                  <img
-                    src="https://cdn.worldvectorlogo.com/logos/mastercard-modern-design-.svg"
-                    alt="Mastercard"
-                    className="h-8"
-                  />
-                  <img
-                    src="https://cdn.worldvectorlogo.com/logos/american-express-3.svg"
-                    alt="American Express"
-                    className="h-8"
-                  />
-                  <img
-                    src="https://cdn.worldvectorlogo.com/logos/rupay.svg"
-                    alt="RuPay"
-                    className="h-8"
-                  />
-                  <img
-                    src="https://cdn.worldvectorlogo.com/logos/google-pay-2.svg"
-                    alt="Google Pay"
-                    className="h-8"
-                  />
-                  <img
-                    src="https://www.vectorlogo.zone/logos/apple/apple-icon.svg"
-                    alt="Apple Pay"
-                    className="h-8"
-                  />
-                  
+                <h4 className="text-lg font-semibold text-yellow-300 mb-3 text-center lg:text-left">We Accept</h4>
+                <div className="flex flex-wrap justify-center lg:justify-start items-center gap-3">
+                  <img src="https://cdn.worldvectorlogo.com/logos/visa-10.svg" alt="Visa" className="h-6 sm:h-8" />
+                  <img src="https://cdn.worldvectorlogo.com/logos/mastercard-modern-design-.svg" alt="Mastercard" className="h-6 sm:h-8" />
+                  <img src="https://cdn.worldvectorlogo.com/logos/american-express-3.svg" alt="American Express" className="h-6 sm:h-8" />
+                  <img src="https://cdn.worldvectorlogo.com/logos/rupay.svg" alt="RuPay" className="h-6 sm:h-8" />
+                  <img src="https://cdn.worldvectorlogo.com/logos/google-pay-2.svg" alt="Google Pay" className="h-6 sm:h-8" />
+                  <img src="https://www.vectorlogo.zone/logos/apple/apple-icon.svg" alt="Apple Pay" className="h-6 sm:h-8" />
                 </div>
               </div>
               
-              <div class="text-center lg:text-right">
-  <h4 class="text-lg font-semibold text-yellow-300 mb-2">Follow Us</h4>
-  <div class="flex gap-3 justify-center lg:justify-end">
-    <a href="https://www.instagram.com/fruit_elegancee" target="_blank" rel="noopener noreferrer" class="p-2 rounded-full hover:bg-green-700 transition-colors">
-      <img src="https://www.vectorlogo.zone/logos/instagram/instagram-icon.svg" alt="Instagram" class="h-6 w-6"/>
-    </a>
-    <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" class="p-2 rounded-full hover:bg-green-700 transition-colors">
-      <img src="https://www.vectorlogo.zone/logos/whatsapp/whatsapp-icon.svg" alt="WhatsApp" class="h-6 w-6"/>
-    </a>
-  </div>
-</div>
+              <div className="text-center lg:text-right">
+                <h4 className="text-lg font-semibold text-yellow-300 mb-2">Follow Us</h4>
+                <div className="flex gap-3 justify-center lg:justify-end">
+                  <a href="https://www.instagram.com/fruit_elegancee" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full hover:bg-green-700 transition-colors">
+                    <img src="https://www.vectorlogo.zone/logos/instagram/instagram-icon.svg" alt="Instagram" className="h-6 w-6"/>
+                  </a>
+                  <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full hover:bg-green-700 transition-colors">
+                    <img src="https://www.vectorlogo.zone/logos/whatsapp/whatsapp-icon.svg" alt="WhatsApp" className="h-6 w-6"/>
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="bg-green-950 pt-6 mt-6">
-            <div className="flex flex-col lg:flex-row justify-between items-center gap-4 text-green-200 text-sm max-w-7xl mx-auto px-8 py-4">
-              <div className="text-center lg:text-left">
+          <div className="bg-green-950 pt-4 mt-4">
+            <div className="flex flex-col lg:flex-row justify-between items-center gap-4 text-green-200 text-xs sm:text-sm max-w-7xl mx-auto py-4 text-center">
+              <div>
                 © 2025 Fruit Elegance. All Rights Reserved. | 
                 <Link to="/privacy" className="hover:text-yellow-300 ml-1">Privacy Policy</Link> | 
                 <Link to="/terms" className="hover:text-yellow-300 ml-1">Terms of Service</Link>
               </div>
-              <div className="flex items-center gap-4 text-center lg:text-right">
+              <div className="flex items-center justify-center gap-4 text-center lg:text-right">
                 <span>🔒 Secure Shopping</span>
                 <span>🚚 Fast Delivery</span>
                 <span>🌱 100% Fresh</span>
@@ -728,6 +689,9 @@ export default function Home() {
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
           overflow: hidden;
+        }
+        .xs\\:grid-cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       `}</style>
     </div>
