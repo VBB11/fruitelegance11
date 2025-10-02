@@ -42,7 +42,7 @@ function Navbar() {
           to="/about"
           className={`${commonLinkClasses} ${location.pathname === '/about' ? activeLinkClasses : inactiveLinkClasses}`}
         >
-          AbouT
+          About
         </Link>
       </div>
 

@@ -3,7 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import axios from 'axios';
-import { FaPlus, FaMinus, FaTrashAlt, FaMapMarkerAlt, FaCheckCircle, FaChevronLeft, FaShippingFast, FaExclamationCircle } from 'react-icons/fa';
+import { 
+  FaPlus, FaMinus, FaTrashAlt, FaMapMarkerAlt, FaCheckCircle, FaChevronLeft, 
+  FaShippingFast, FaExclamationCircle 
+} from 'react-icons/fa';
 import config from './config/config';
 
 const placeholderImage =
@@ -11,13 +14,26 @@ const placeholderImage =
 
 function Cart() {
   const { cart, dispatch } = useCart();
-  const { token, user } = useContext(AuthContext);
+  const { token, user, login } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [guestForm, setGuestForm] = useState({
+    name: '',
+    email: '',
+    mobile: '',
+    street: '',
+    city: '',
+    state: '',
+    zip: '',
+    country: '',
+  });
+  const [guestFormError, setGuestFormError] = useState('');
+  const [guestSubmitting, setGuestSubmitting] = useState(false);
 
   useEffect(() => {
     async function fetchAddresses() {
@@ -28,6 +44,7 @@ function Cart() {
           setLoading(false);
           return;
         }
+
         const res = await axios.get(`${config.backendUrl}/api/user/addresses`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -41,7 +58,7 @@ function Cart() {
 
         if (normalized.length > 0) {
           const storedAddress = JSON.parse(localStorage.getItem('selectedAddress'));
-          if (storedAddress && normalized.find(addr => addr._id === storedAddress._id)) {
+          if (storedAddress && normalized.find(addr => String(addr._id) === storedAddress._id)) {
             setSelectedAddressId(storedAddress._id);
           } else {
             setSelectedAddressId(normalized[0]._id);
@@ -61,8 +78,9 @@ function Cart() {
     fetchAddresses();
   }, [token]);
 
-  // Find full selected address object for rendering and passing on proceed
-  const selectedAddress = addresses.find(addr => addr._id === selectedAddressId);
+  const selectedAddress = user ? 
+    addresses.find(addr => String(addr._id) === selectedAddressId) : 
+    guestForm;
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * (item.qty || 1), 0);
   const deliveryFeeThreshold = 999;
@@ -74,16 +92,67 @@ function Cart() {
       alert('Your cart is empty.');
       return;
     }
-    if (!selectedAddress) {
-      alert('Please select a delivery address.');
+    if (!selectedAddress || !selectedAddress.street) {
+      alert('Please provide a delivery address.');
       return;
     }
 
-    // Save full selected address object to localStorage for checkout usage
     localStorage.setItem('selectedAddress', JSON.stringify(selectedAddress));
-
-    console.log('Proceed with address:', selectedAddress);
     navigate('/checkout', { state: { address: selectedAddress } });
+  };
+
+  const handleGuestInputChange = (e) => {
+    const { name, value } = e.target;
+    setGuestForm(prev => ({ ...prev, [name]: value }));
+    setGuestFormError('');
+  };
+
+  const validateGuestForm = () => {
+    const requiredFields = ['name', 'email', 'mobile', 'street', 'city', 'state', 'zip', 'country'];
+    for (let field of requiredFields) {
+      if (!guestForm[field] || guestForm[field].trim() === '') {
+        return `Please enter your ${field}.`;
+      }
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(guestForm.email)) return 'Please enter a valid email.';
+    return null;
+  };
+
+  const handleGuestSubmit = async (e) => {
+    e.preventDefault();
+    const errorMsg = validateGuestForm();
+    if (errorMsg) {
+      setGuestFormError(errorMsg);
+      return;
+    }
+
+    setGuestSubmitting(true);
+    setGuestFormError('');
+    try {
+      const res = await axios.post(`${config.backendUrl}/api/auth/guest-checkout`, {
+        name: guestForm.name.trim(),
+        email: guestForm.email.trim(),
+        address: {
+          name: guestForm.name.trim(),
+          mobile: guestForm.mobile.trim(),
+          street: guestForm.street.trim(),
+          city: guestForm.city.trim(),
+          state: guestForm.state.trim(),
+          zip: guestForm.zip.trim(),
+          country: guestForm.country.trim(),
+        }
+      });
+      login({ token: res.data.token, user: res.data.user });
+      setAddresses([res.data.user.addresses[0]]);
+      setSelectedAddressId(null);
+      localStorage.setItem('selectedAddress', JSON.stringify(res.data.user.addresses[0]));
+      navigate('/checkout', { state: { address: res.data.user.addresses[0] } });
+    } catch (err) {
+      console.error(err);
+      setGuestFormError(err.response?.data?.error || 'Failed to complete guest checkout.');
+    }
+    setGuestSubmitting(false);
   };
 
   if (loading) {
@@ -94,7 +163,7 @@ function Cart() {
     );
   }
 
-  const isProceedDisabled = cart.length === 0 || !selectedAddress;
+  const isProceedDisabled = cart.length === 0 || (!selectedAddress || !selectedAddress.street);
 
   return (
     <div className="relative bg-[#f9f1dd] min-h-screen select-none py-16 px-4 sm:px-8">
@@ -163,47 +232,143 @@ function Cart() {
           </div>
 
           <div className="lg:col-span-1 flex flex-col gap-8">
-            <div className="bg-white rounded-3xl shadow-md p-6">
-              <h2 className="text-2xl font-bold text-green-800 mb-4">Delivery Address</h2>
-              {loading ? (
-                <p className="text-gray-600">Loading addresses...</p>
-              ) : error ? (
-                <p className="text-red-600">{error}</p>
-              ) : addresses.length === 0 ? (
-                <p className="text-gray-600">
-                  No saved addresses. Please <Link to="/profile/addresses" className="text-green-700 hover:underline">add one</Link> in your profile.
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {addresses.map(addr => (
-                    <div
-                      key={addr._id}
-                      onClick={() => setSelectedAddressId(String(addr._id))}
-                      className={`relative p-4 rounded-xl border-2 transition-colors cursor-pointer ${
-                        selectedAddressId === String(addr._id)
-                          ? 'border-green-600 bg-green-50'
-                          : 'border-gray-200 hover:border-green-300'
-                      }`}
-                    >
-                      {selectedAddressId === String(addr._id) && (
-                        <FaCheckCircle className="absolute top-2 right-2 text-green-600" />
-                      )}
-                      <h3 className="font-semibold text-gray-800 flex items-center">
-                        <FaMapMarkerAlt className="mr-2 text-green-600" />
-                        {addr.name || 'Unnamed Address'}
-                      </h3>
-                      <p className="text-sm text-gray-600 mt-1">{addr.street}, {addr.city}</p>
-                      <p className="text-sm text-gray-600">{addr.state}, {addr.zip}, {addr.country}</p>
-                      <p className="text-sm text-gray-600">Phone: {addr.mobile || 'Not provided'}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            {user ? (
+              <div className="bg-white rounded-3xl shadow-md p-6">
+                <h2 className="text-2xl font-bold text-green-800 mb-4">Delivery Address</h2>
+                {error ? (
+                  <p className="text-red-600">{error}</p>
+                ) : addresses.length === 0 ? (
+                  <p className="text-gray-600">
+                    No saved addresses. Please <Link to="/profile/addresses" className="text-green-700 hover:underline">add one</Link> in your profile.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {addresses.map(addr => (
+                      <div
+                        key={addr._id}
+                        onClick={() => setSelectedAddressId(String(addr._id))}
+                        className={`relative p-4 rounded-xl border-2 transition-colors cursor-pointer ${
+                          selectedAddressId === String(addr._id)
+                            ? 'border-green-600 bg-green-50'
+                            : 'border-gray-200 hover:border-green-300'
+                        }`}
+                      >
+                        {selectedAddressId === String(addr._id) && (
+                          <FaCheckCircle className="absolute top-2 right-2 text-green-600" />
+                        )}
+                        <h3 className="font-semibold text-gray-800 flex items-center">
+                          <FaMapMarkerAlt className="mr-2 text-green-600" />
+                          {addr.name || 'Unnamed Address'}
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">{addr.street}, {addr.city}</p>
+                        <p className="text-sm text-gray-600">{addr.state}, {addr.zip}, {addr.country}</p>
+                        <p className="text-sm text-gray-600">Phone: {addr.mobile || 'Not provided'}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl shadow-md p-6">
+                <h2 className="text-2xl font-bold text-green-800 mb-4">Guest Checkout - Enter Your Details</h2>
+                {guestFormError && (
+                  <p className="mb-4 text-red-600 font-semibold">{guestFormError}</p>
+                )}
+                <form onSubmit={handleGuestSubmit} className="space-y-3">
+                  <input
+                    type="text"
+                    name="name"
+                    value={guestForm.name}
+                    onChange={handleGuestInputChange}
+                    placeholder="Full Name"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                    required
+                  />
+                  <input
+                    type="email"
+                    name="email"
+                    value={guestForm.email}
+                    onChange={handleGuestInputChange}
+                    placeholder="Email"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                    required
+                  />
+                  <input
+                    type="tel"
+                    name="mobile"
+                    value={guestForm.mobile}
+                    onChange={handleGuestInputChange}
+                    placeholder="Mobile Number"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                    required
+                  />
+                  <input
+                    type="text"
+                    name="street"
+                    value={guestForm.street}
+                    onChange={handleGuestInputChange}
+                    placeholder="Street"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                    required
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      name="city"
+                      value={guestForm.city}
+                      onChange={handleGuestInputChange}
+                      placeholder="City"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                      required
+                    />
+                    <input
+                      type="text"
+                      name="state"
+                      value={guestForm.state}
+                      onChange={handleGuestInputChange}
+                      placeholder="State"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      name="zip"
+                      value={guestForm.zip}
+                      onChange={handleGuestInputChange}
+                      placeholder="ZIP Code"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                      required
+                    />
+                    <input
+                      type="text"
+                      name="country"
+                      value={guestForm.country}
+                      onChange={handleGuestInputChange}
+                      placeholder="Country"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={guestSubmitting}
+                    className={`w-full mt-4 bg-green-800 hover:bg-green-900 text-white px-6 py-3 rounded-full font-semibold text-lg transition-colors ${
+                      guestSubmitting ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {guestSubmitting ? 'Processing...' : 'Checkout as Guest'}
+                  </button>
+                </form>
+              </div>
+            )}
 
             <div className="bg-white rounded-3xl shadow-md p-6">
               <h2 className="text-2xl font-bold text-green-800 mb-4">Order Summary</h2>
-              <div className={`p-4 rounded-lg flex items-center gap-2 mb-4 ${subtotal >= deliveryFeeThreshold ? 'bg-green-50 text-green-800' : 'bg-yellow-50 text-yellow-800'}`}>
+              <div className={`p-4 rounded-lg flex items-center gap-2 mb-4 ${
+                subtotal >= deliveryFeeThreshold ? 'bg-green-50 text-green-800' : 'bg-yellow-50 text-yellow-800'
+              }`}>
                 {subtotal >= deliveryFeeThreshold ? (
                   <>
                     <FaShippingFast size={20} />

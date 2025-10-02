@@ -24,11 +24,46 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Export both router and transporter
-module.exports = {
-  router,
-  transporter,
-};
+// Guest Checkout - create user & address, return auth token
+router.post('/guest-checkout', async (req, res) => {
+  const { name, email, address } = req.body;
+  if (!name || !email || !address) {
+    return res.status(400).json({ error: 'Name, email, and address are required' });
+  }
+  try {
+    let user = await User.findOne({ email });
+    if (user) {
+      return res.status(409).json({ error: 'Email already registered. Please log in.' });
+    }
+
+    const randomPassword = Math.random().toString(36).slice(-8);
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(randomPassword, salt);
+
+    user = new User({
+      name,
+      email,
+      passwordHash,
+      addresses: [address],
+    });
+
+    await user.save();
+
+    const token = jwt.sign(
+      { id: user._id.toString(), email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    res.json({
+      token,
+      user: { id: user._id, name: user.name, email: user.email, addresses: user.addresses },
+    });
+  } catch (error) {
+    console.error('Guest checkout error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 router.post('/signup', async (req, res) => {
   const { name, email, password } = req.body;
@@ -54,16 +89,10 @@ router.post('/signup', async (req, res) => {
 router.post('/google', async (req, res) => {
   const { tokenId } = req.body;
   if (!tokenId) return res.status(400).json({ error: 'Google token ID is required' });
-
   try {
-    const ticket = await client.verifyIdToken({
-      idToken: tokenId,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
+    const ticket = await client.verifyIdToken({ idToken: tokenId, audience: process.env.GOOGLE_CLIENT_ID });
     const payload = ticket.getPayload();
     const { email, name, picture } = payload;
-
     let user = await User.findOne({ email });
 
     if (!user) {
@@ -77,22 +106,12 @@ router.post('/google', async (req, res) => {
       await user.save();
     }
 
-    const token = jwt.sign(
-      { id: user._id.toString(), email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
-    );
+    const token = jwt.sign({ id: user._id.toString(), email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
     res.json({
       token,
       role: user.role,
-      user: {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-        name: user.name || '',
-        avatar: user.avatar || '',
-      },
+      user: { id: user._id, email: user.email, role: user.role, name: user.name || '', avatar: user.avatar || '' },
     });
   } catch (error) {
     console.error('Google login error:', error);
@@ -107,32 +126,19 @@ router.post('/login', async (req, res) => {
   try {
     if (email === hardcodedAdmin.email && password === hardcodedAdmin.password) {
       const token = jwt.sign({ id: hardcodedAdmin.id, email, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '1d' });
-      return res.json({
-        token,
-        role: 'admin',
-        user: { id: hardcodedAdmin.id, email, role: 'admin', name: hardcodedAdmin.name },
-      });
+      return res.json({ token, role: 'admin', user: { id: hardcodedAdmin.id, email, role: 'admin', name: hardcodedAdmin.name } });
     }
 
     const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-
     if (user.isGoogleAccount) return res.status(400).json({ error: 'Please login via Google Sign-In' });
 
     const validPassword = await bcrypt.compare(password, user.passwordHash);
     if (!validPassword) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const token = jwt.sign(
-      { id: user._id.toString(), email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
-    );
+    const token = jwt.sign({ id: user._id.toString(), email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
-    res.json({
-      token,
-      role: user.role,
-      user: { id: user._id, email: user.email, role: user.role, name: user.name || '', avatar: user.avatar || '' },
-    });
+    res.json({ token, role: user.role, user: { id: user._id, email: user.email, role: user.role, name: user.name || '', avatar: user.avatar || '' } });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -142,14 +148,13 @@ router.post('/login', async (req, res) => {
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required' });
-
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const resetToken = crypto.randomBytes(20).toString('hex');
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    user.resetPasswordExpires = Date.now() + 3600000;
 
     await user.save();
 
@@ -185,7 +190,6 @@ router.post('/forgot-password', async (req, res) => {
 router.post('/reset-password', async (req, res) => {
   const { token, newPassword } = req.body;
   if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password are required' });
-
   try {
     const user = await User.findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: Date.now() } });
     if (!user) return res.status(400).json({ error: 'Invalid or expired token' });
@@ -209,4 +213,3 @@ module.exports = {
   router,
   transporter,
 };
-
