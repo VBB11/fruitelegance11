@@ -388,7 +388,7 @@ export default function Home() {
                 alt={title}
                 className="w-full h-96 md:h-[60vh] lg:h-screen object-cover brightness-90 transition"
               />
-              <div className="absolute bottom-10 left-5 sm:bottom-20 sm:left-20 max-w-xs sm:max-w-lg">
+              <div className="absolute bottom-10 left-5 sm:bottom-20 sm:left-20 max-w-[calc(100%-40px)] sm:max-w-lg">
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold drop-shadow-xl">{title}</h2>
                 <span className="mt-4 inline-block bg-yellow-300 rounded-full px-4 sm:px-8 py-2 sm:py-3 text-yellow-900 font-semibold text-sm sm:text-lg md:text-2xl cursor-pointer hover:bg-yellow-400 transition">
                   {label}
@@ -508,7 +508,7 @@ export default function Home() {
       )}
 
       {/* Products Grid */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 relative z-30">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 relative z-30">
         {displayedProducts.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <p className="text-gray-600 text-lg mb-4">
@@ -689,9 +689,6 @@ export default function Home() {
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
           overflow: hidden;
-        }
-        .xs\\:grid-cols-2 {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       `}</style>
     </div>
