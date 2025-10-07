@@ -1,17 +1,29 @@
-import React, { useEffect, useState } from "react";
+// src/pages/Home.js
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Slider from "react-slick";
-import { Link } from "react-router-dom";
-import { FaHeart, FaRegHeart, FaEye, FaTimes, FaSeedling, FaHandshake, FaMoneyCheckAlt, FaLock } from "react-icons/fa";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  FaHeart,
+  FaRegHeart,
+  FaEye,
+  FaTimes,
+  FaSeedling,
+  FaHandshake,
+  FaMoneyCheckAlt,
+  FaLock,
+} from "react-icons/fa";
 import { useCart } from "../context/CartContext";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import config from "./config/config";
 
+// Fallback image for products
 const placeholderImage =
   "https://cdn.pixabay.com/photo/2016/04/01/10/07/fruit-1303048_1280.png";
 
-const banners = [
+// Fallback banners (used until backend returns data)
+const FALLBACK_BANNERS = [
   {
     id: 1,
     img: "https://deq64r0ss2hgl.cloudfront.net/images/product/dry-fruits-gift-boxes-hampers-14465093981690.png",
@@ -35,7 +47,8 @@ const banners = [
   },
 ];
 
-const categories = [
+// Fallback categories (used until backend returns data)
+const FALLBACK_CATEGORIES = [
   {
     label: "Everyday Fruits",
     image: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png",
@@ -69,28 +82,62 @@ const categories = [
 ];
 
 const whyChooseUsFeatures = [
-  { icon: FaSeedling, text: "100% Freshness", color: "text-green-700", desc: "Our fruits are hand-picked daily for peak freshness." },
-  { icon: FaHandshake, text: "Ethical Sourcing", color: "text-amber-700", desc: "We partner with local farms to ensure fair trade practices." },
-  { icon: FaMoneyCheckAlt, text: "Best Price", color: "text-blue-700", desc: "We offer premium quality fruits at the most competitive prices." },
-  { icon: FaLock, text: "Secure Payments", color: "text-purple-700", desc: "Your transactions are protected with the highest level of security." },
+  {
+    icon: FaSeedling,
+    text: "100% Freshness",
+    color: "text-green-700",
+    desc: "Our fruits are hand-picked daily for peak freshness.",
+  },
+  {
+    icon: FaHandshake,
+    text: "Ethical Sourcing",
+    color: "text-amber-700",
+    desc: "We partner with local farms to ensure fair trade practices.",
+  },
+  {
+    icon: FaMoneyCheckAlt,
+    text: "Best Price",
+    color: "text-blue-700",
+    desc: "We offer premium quality fruits at the most competitive prices.",
+  },
+  {
+    icon: FaLock,
+    text: "Secure Payments",
+    color: "text-purple-700",
+    desc: "Your transactions are protected with the highest level of security.",
+  },
 ];
 
-function Categories({ selectedCategory, onSelectCategory }) {
+// Category pills (presentational)
+function Categories({ selectedCategory, onSelectCategory, items }) {
   return (
     <section className="max-w-7xl mx-auto rounded-2xl bg-white shadow-md py-8 px-4 sm:px-6 my-10 relative z-30">
-      <h2 className="text-2xl sm:text-3xl font-extrabold mb-6 text-gray-900 text-center">Shop by Category</h2>
+      <h2 className="text-2xl sm:text-3xl font-extrabold mb-6 text-gray-900 text-center">
+        Shop by Category
+      </h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 sm:gap-6">
-        {categories.map(({ label, image, bg }) => (
+        {items.map(({ label, image, bg }, idx) => (
           <button
-            key={label}
-            onClick={() => onSelectCategory(selectedCategory === label ? null : label)}
+            key={`${label}-${idx}`}
+            onClick={() =>
+              onSelectCategory(selectedCategory === label ? null : label)
+            }
             className={`flex flex-col items-center rounded-xl ${bg} p-3 sm:p-5 cursor-pointer transition ${
-              selectedCategory === label ? "ring ring-green-400 ring-offset-2" : "hover:shadow-xl"
+              selectedCategory === label
+                ? "ring ring-green-400 ring-offset-2"
+                : "hover:shadow-xl"
             }`}
             aria-pressed={selectedCategory === label}
           >
-            <img src={image} alt={label} className="w-12 h-12 sm:w-16 sm:h-16 mb-2 object-contain" loading="lazy" />
-            <span className="text-center text-sm sm:text-base font-medium">{label}</span>
+            <img
+              src={image}
+              alt={label}
+              className="w-12 h-12 sm:w-16 sm:h-16 mb-2 object-contain"
+              loading="lazy"
+            />
+            <span className="text-center text-sm sm:text-base font-medium">
+              {label}
+            </span>
           </button>
         ))}
       </div>
@@ -98,26 +145,47 @@ function Categories({ selectedCategory, onSelectCategory }) {
   );
 }
 
+// Quick view modal for products
 const QuickViewModal = ({ product, onClose, handleAdd }) => {
   if (!product) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-800 bg-opacity-75">
       <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full mx-4 shadow-lg relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition"
+          aria-label="Close quick view"
+        >
           <FaTimes size={24} />
         </button>
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-1 flex items-center justify-center">
-            <img src={product.image || placeholderImage} alt={product.name} className="w-full h-auto max-h-64 object-contain" />
+            <img
+              src={product.image || placeholderImage}
+              alt={product.name}
+              className="w-full h-auto max-h-64 object-contain"
+            />
           </div>
           <div className="flex-1 flex flex-col justify-center text-center md:text-left">
-            <h3 className="text-xl sm:text-2xl font-extrabold text-green-800 mb-2">{product.name}</h3>
-            <p className="text-lg sm:text-xl font-semibold text-green-900 mb-4">₹{product.price}</p>
-            <p className="text-gray-600 mb-4 line-clamp-3">{product.description}</p>
-            <button onClick={() => handleAdd(product)} className="bg-green-800 text-white rounded-full py-3 font-semibold hover:bg-green-900 transition-colors">
+            <h3 className="text-xl sm:text-2xl font-extrabold text-green-800 mb-2">
+              {product.name}
+            </h3>
+            <p className="text-lg sm:text-xl font-semibold text-green-900 mb-4">
+              ₹{product.price}
+            </p>
+            <p className="text-gray-600 mb-4 line-clamp-3">
+              {product.description}
+            </p>
+            <button
+              onClick={() => handleAdd(product)}
+              className="bg-green-800 text-white rounded-full py-3 font-semibold hover:bg-green-900 transition-colors"
+            >
               Add to Cart
             </button>
-            <Link to={`/product/${product._id}`} className="mt-2 text-center text-green-700 hover:underline">
+            <Link
+              to={`/product/${product._id}`}
+              className="mt-2 text-center text-green-700 hover:underline"
+            >
               View Full Details
             </Link>
           </div>
@@ -127,17 +195,24 @@ const QuickViewModal = ({ product, onClose, handleAdd }) => {
   );
 };
 
-const ProductCard = ({ product, getQuantity, handleAdd, handleRemove, toggleFavorite, favorites, onQuickView }) => {
+// Product card
+const ProductCard = ({
+  product,
+  getQuantity,
+  handleAdd,
+  handleRemove,
+  toggleFavorite,
+  favorites,
+  onQuickView,
+}) => {
+  const [isHovering, setIsHovering] = useState(false);
   const qty = getQuantity(product._id);
   const isFavorite = favorites.includes(product._id);
   const isNew = product.isNew || false;
   const isBestSeller = product.isBestSeller || false;
 
-  const [isHovering, setIsHovering] = useState(false);
-
   return (
     <article
-      key={product._id}
       className="bg-white rounded-3xl shadow-md border border-gray-200 cursor-default select-none relative flex flex-col transition-all duration-300 transform hover:scale-[1.02]"
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
@@ -233,9 +308,29 @@ const rightPanti = (
   />
 );
 
+function isInternal(link) {
+  return typeof link === "string" && /^\/(?!\/)/.test(link);
+}
+
+// Helpers to read query
+function getCategorySlugFromQuery(search) {
+  const u = new URLSearchParams(search || "");
+  return u.get("category") || "";
+}
+
 export default function Home() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Core lists
   const [products, setProducts] = useState([]);
   const [displayedProducts, setDisplayedProducts] = useState([]);
+
+  // Dynamic meta lists with fallback
+  const [bannerItems, setBannerItems] = useState(FALLBACK_BANNERS);
+  const [categoryItems, setCategoryItems] = useState(FALLBACK_CATEGORIES);
+
+  // UI state
   const [error, setError] = useState("");
   const [popup, setPopup] = useState(null);
   const [favorites, setFavorites] = useState(() => {
@@ -246,19 +341,22 @@ export default function Home() {
       return [];
     }
   });
-  
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null); // hidden id for robust filtering
   const [showFavorites, setShowFavorites] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
 
   const { cart, dispatch } = useCart();
 
+  // Load products
   useEffect(() => {
+    let ignore = false;
     axios
       .get(`${config.backendUrl}/api/products`)
       .then((res) => {
+        if (ignore) return;
         if (Array.isArray(res.data)) {
           const productsWithBadges = res.data.map((p, index) => ({
             ...p,
@@ -274,53 +372,179 @@ export default function Home() {
         }
       })
       .catch(() => {
+        if (ignore) return;
         setError("Failed to fetch products");
         setProducts([]);
         setDisplayedProducts([]);
       });
+    return () => {
+      ignore = true;
+    };
   }, []);
 
+  // Load banners (public active banners)
+  useEffect(() => {
+    let ignore = false;
+    async function loadBanners() {
+      try {
+        const res = await axios.get(`${config.backendUrl}/api/banners`);
+        const list = Array.isArray(res.data)
+          ? res.data
+          : res.data?.banners || [];
+        if (!ignore && list.length) {
+          const mapped = list
+            .filter((b) => b?.img || b?.imageUrl)
+            .map((b, idx) => {
+              const img = b.img || b.imageUrl;
+              const id = b._id || b.id || `${img}-${idx}`;
+              // Normalize: if link is /category/<slug>, convert to /?category=<slug>
+              const rawLink =
+                b.link ||
+                (b.categorySlug ? `/category/${b.categorySlug}` : "");
+              let to = "";
+              if (rawLink.startsWith("/category/")) {
+                const slug = rawLink.split("/category/")[1] || "";
+                to = `/?category=${encodeURIComponent(slug)}`;
+              } else if (isInternal(rawLink)) {
+                to = rawLink; // other internal links still work
+              } else {
+                to = ""; // treat as non-link
+              }
+              return {
+                id,
+                img,
+                title: b.title || "",
+                label: b.label || "",
+                to, // normalized target
+              };
+            });
+          setBannerItems(mapped);
+        }
+      } catch {
+        // keep fallback
+      }
+    }
+    loadBanners();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  // Load categories (public active categories)
+  useEffect(() => {
+    let ignore = false;
+    async function loadCategories() {
+      try {
+        const res = await axios.get(`${config.backendUrl}/api/categories`);
+        const list = Array.isArray(res.data)
+          ? res.data
+          : res.data?.categories || [];
+        if (!ignore && list.length) {
+          const mapped = list.map((c) => ({
+            id: c._id || c.id,
+            label: c.name || c.label || c.title || "Category",
+            image:
+              c.image ||
+              c.icon ||
+              "https://cdn-icons-png.flaticon.com/512/4155/4155886.png",
+            bg: c.bg || "bg-green-50",
+            slug: c.slug,
+          }));
+          setCategoryItems(mapped);
+        }
+      } catch {
+        // keep fallback
+      }
+    }
+    loadCategories();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  // Apply incoming category selection from state or ?category=slug
+  useEffect(() => {
+    // Prefer state if provided by navigate("/", { state: { categorySlug } })
+    const stateSlug = location.state?.categorySlug;
+    const querySlug = getCategorySlugFromQuery(location.search);
+    const wantedSlug = stateSlug || querySlug;
+    if (!wantedSlug || categoryItems.length === 0) return;
+
+    const match = categoryItems.find((c) => c.slug === wantedSlug);
+    if (match) {
+      setSelectedCategory(match.label);
+      setSelectedCategoryId(match.id || null);
+      // If state was used, clean it so back/forward is tidy
+      if (stateSlug) navigate("/", { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key, location.search, location.state, categoryItems]);
+
+  // Persist favorites
   useEffect(() => {
     localStorage.setItem("favorites", JSON.stringify(favorites));
   }, [favorites]);
 
+  // Apply filters
   useEffect(() => {
     let filtered = [...products];
-    
+
     if (showFavorites) {
       filtered = filtered.filter((p) => favorites.includes(p._id));
     }
-    
-    if (selectedCategory) {
-      filtered = filtered.filter((p) => p.categoryId?.name === selectedCategory);
+
+    // Prefer id-based match; fallback to name
+    if (selectedCategory || selectedCategoryId) {
+      filtered = filtered.filter((p) => {
+        const byId =
+          selectedCategoryId &&
+          (typeof p.categoryId === "string"
+            ? String(p.categoryId) === String(selectedCategoryId)
+            : String(p.categoryId?._id) === String(selectedCategoryId) ||
+              String(p.category?._id) === String(selectedCategoryId));
+        if (byId) return true;
+
+        const name =
+          p.category?.name ||
+          p.categoryName ||
+          p.categoryId?.name ||
+          p.category ||
+          "";
+        return selectedCategory ? name === selectedCategory : false;
+      });
     }
-    
+
     const min = parseFloat(minPrice);
     const max = parseFloat(maxPrice);
-    
-    if (!isNaN(min)) {
-      filtered = filtered.filter((p) => p.price >= min);
-    }
-    
-    if (!isNaN(max)) {
-      filtered = filtered.filter((p) => p.price <= max);
-    }
-    
+
+    if (!isNaN(min)) filtered = filtered.filter((p) => p.price >= min);
+    if (!isNaN(max)) filtered = filtered.filter((p) => p.price <= max);
+
     setDisplayedProducts(filtered);
-  }, [products, favorites, showFavorites, selectedCategory, minPrice, maxPrice]);
+  }, [
+    products,
+    favorites,
+    showFavorites,
+    selectedCategory,
+    selectedCategoryId,
+    minPrice,
+    maxPrice,
+  ]);
+
+ 
 
   const handleAdd = (product) => {
     dispatch({ type: "ADD_ITEM", payload: product });
     setPopup(`Added "${product.name}" to cart`);
     setTimeout(() => setPopup(null), 1500);
   };
-  
+
   const handleRemove = (productId) => {
-    const itemInCart = cart.find(item => item._id === productId);
+    const itemInCart = cart.find((item) => item._id === productId);
     if (!itemInCart) {
-        setPopup("Item not in cart");
-        setTimeout(() => setPopup(null), 1500);
-        return;
+      setPopup("Item not in cart");
+      setTimeout(() => setPopup(null), 1500);
+      return;
     }
     dispatch({ type: "DECREMENT_QTY", payload: productId });
     setPopup(`Removed one "${itemInCart.name}" from cart`);
@@ -344,7 +568,12 @@ export default function Home() {
     setMinPrice("");
     setMaxPrice("");
     setSelectedCategory(null);
+    setSelectedCategoryId(null);
     setShowFavorites(false);
+    // Also clean ?category= from URL for clarity
+    if (getCategorySlugFromQuery(location.search)) {
+      navigate("/", { replace: true });
+    }
   };
 
   const getQuantity = (productId) => {
@@ -352,50 +581,63 @@ export default function Home() {
     return item ? item.qty || 0 : 0;
   };
 
-  const sliderSettings = {
-    dots: true,
-    infinite: true,
-    autoplay: true,
-    autoplaySpeed: 3000,
-    speed: 800,
-    slidesToShow: 1,
-    slidesToScroll: 1,
-    arrows: false,
-    pauseOnHover: true,
-    responsive: [
-      {
-        breakpoint: 768, // md
-        settings: {
-          arrows: false
-        }
-      }
-    ]
-  };
+  // Slick settings
+  const sliderSettings = useMemo(
+    () => ({
+      dots: true,
+      infinite: bannerItems.length > 1,
+      autoplay: bannerItems.length > 1,
+      autoplaySpeed: 4000,
+      speed: 700,
+      slidesToShow: 1,
+      slidesToScroll: 1,
+      arrows: false,
+      pauseOnHover: true,
+      adaptiveHeight: false,
+      responsive: [{ breakpoint: 768, settings: { arrows: false } }],
+    }),
+    [bannerItems.length]
+  );
 
   return (
     <div className="relative bg-[#f9f1dd] min-h-screen select-none overflow-x-hidden">
       {/* Banner */}
       <section className="shadow-lg bg-white w-full mb-10">
         <Slider {...sliderSettings} className="w-screen relative z-20">
-          {banners.map(({ id, img, title, label, link }) => (
-            <Link
-              to={link}
-              key={id}
-              className="block relative cursor-pointer text-white overflow-hidden"
-            >
-              <img
-                src={img}
-                alt={title}
-                className="w-full h-96 md:h-[60vh] lg:h-screen object-cover brightness-90 transition"
-              />
-              <div className="absolute bottom-10 left-5 sm:bottom-20 sm:left-20 max-w-[calc(100%-40px)] sm:max-w-lg">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold drop-shadow-xl">{title}</h2>
-                <span className="mt-4 inline-block bg-yellow-300 rounded-full px-4 sm:px-8 py-2 sm:py-3 text-yellow-900 font-semibold text-sm sm:text-lg md:text-2xl cursor-pointer hover:bg-yellow-400 transition">
-                  {label}
-                </span>
-              </div>
-            </Link>
-          ))}
+          {bannerItems.map(({ id, img, title, label, to }, idx) => {
+            const key = id || `${img}-${idx}`;
+            const hasInternal = to && isInternal(to);
+            const Wrapper = hasInternal ? Link : "div";
+            const wrapperProps = hasInternal ? { to } : {};
+            return (
+              <Wrapper
+                {...wrapperProps}
+                key={key}
+                className="block relative cursor-pointer text-white overflow-hidden"
+              >
+                <img
+                  src={img}
+                  alt={title || "Banner"}
+                  className="w-full h-96 md:h-[60vh] lg:h-screen object-cover brightness-90 hover:brightness-100 transition duration-500 ease-in-out"
+                  loading="eager"
+                />
+                {(title || label) && (
+                  <div className="absolute bottom-10 left-5 sm:bottom-20 sm:left-20 max-w-[calc(100%-40px)] sm:max-w-lg">
+                    {title && (
+                      <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold drop-shadow-xl">
+                        {title}
+                      </h2>
+                    )}
+                    {label && (
+                      <span className="mt-4 inline-block bg-yellow-300 rounded-full px-4 sm:px-8 py-2 sm:py-3 text-yellow-900 font-semibold text-sm sm:text-lg md:text-2xl cursor-pointer hover:bg-yellow-400 transition">
+                        {label}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </Wrapper>
+            );
+          })}
         </Slider>
       </section>
 
@@ -404,9 +646,10 @@ export default function Home() {
       {rightPanti}
 
       {/* Categories with Selection */}
-      <Categories 
-        selectedCategory={selectedCategory} 
-        onSelectCategory={setSelectedCategory} 
+      <Categories
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+        items={categoryItems}
       />
 
       {/* Products Header */}
@@ -451,7 +694,8 @@ export default function Home() {
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              {showFavorites ? "❤️ Favorites On" : "🤍 Show Favorites"} ({favorites.length})
+              {showFavorites ? "❤️ Favorites On" : "🤍 Show Favorites"} (
+              {favorites.length})
             </button>
 
             {/* Reset Filters */}
@@ -512,8 +756,8 @@ export default function Home() {
         {displayedProducts.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <p className="text-gray-600 text-lg mb-4">
-              {products.length === 0 
-                ? "Loading products..." 
+              {products.length === 0
+                ? "Loading products..."
                 : "No products match your filters"}
             </p>
             {products.length > 0 && (
@@ -541,7 +785,7 @@ export default function Home() {
         )}
       </section>
 
-      {/* "Why Choose Us" Section */}
+      {/* Why Choose Us */}
       <section className="max-w-7xl mx-auto rounded-2xl bg-white shadow-md py-10 px-6 sm:px-8 my-10 relative z-30">
         <h2 className="text-3xl font-extrabold mb-8 text-gray-900 text-center">
           Why Choose Fruit Elegance?
@@ -578,7 +822,7 @@ export default function Home() {
             <div>
               <h3 className="text-xl font-bold text-yellow-300 mb-4">Fruit Elegance</h3>
               <p className="text-green-100 mb-4 leading-relaxed text-sm">
-                Your trusted partner for fresh, premium quality fruits. We deliver nature's finest 
+                Your trusted partner for fresh, premium quality fruits. We deliver nature's finest
                 directly to your doorstep with love and care.
               </p>
               <div className="flex items-center gap-2 text-green-100 text-sm">
@@ -644,7 +888,7 @@ export default function Home() {
                   <img src="https://www.vectorlogo.zone/logos/apple/apple-icon.svg" alt="Apple Pay" className="h-6 sm:h-8" />
                 </div>
               </div>
-              
+            
               <div className="text-center lg:text-right">
                 <h4 className="text-lg font-semibold text-yellow-300 mb-2">Follow Us</h4>
                 <div className="flex gap-3 justify-center lg:justify-end">
@@ -662,8 +906,8 @@ export default function Home() {
           <div className="bg-green-950 pt-4 mt-4">
             <div className="flex flex-col lg:flex-row justify-between items-center gap-4 text-green-200 text-xs sm:text-sm max-w-7xl mx-auto py-4 text-center">
               <div>
-                © 2025 Fruit Elegance. All Rights Reserved. | 
-                <Link to="/privacy" className="hover:text-yellow-300 ml-1">Privacy Policy</Link> | 
+                © 2025 Fruit Elegance. All Rights Reserved. |
+                <Link to="/privacy" className="hover:text-yellow-300 ml-1">Privacy Policy</Link> |
                 <Link to="/terms" className="hover:text-yellow-300 ml-1">Terms of Service</Link>
               </div>
               <div className="flex items-center justify-center gap-4 text-center lg:text-right">

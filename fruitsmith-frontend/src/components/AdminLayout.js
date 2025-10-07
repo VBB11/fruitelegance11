@@ -1,13 +1,22 @@
 // src/components/AdminLayout.js
-import React from 'react';
+import React from "react";
+import AdminNav from "./AdminNav";
 
 function AdminLayout({ children }) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-green-700 text-white p-4 text-xl font-bold shadow">
-        Fruit Elegance Admin Panel
+      <header className="bg-green-800 text-white">
+        <div className="max-w-7xl mx-auto px-4 py-4 text-xl font-bold">
+          Fruit Elegance Admin Panel
+        </div>
       </header>
-      <main className="flex-1 p-6">{children}</main>
+
+      {/* Admin top navigation */}
+      <AdminNav />
+
+      <main className="flex-1">
+        <div className="max-w-7xl mx-auto px-4 py-6">{children}</div>
+      </main>
     </div>
   );
 }

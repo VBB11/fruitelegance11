@@ -1,112 +1,137 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import AdminNav from '../../components/AdminNav';
-import axios from 'axios';
-import config from '../config/config';
+// src/pages/admin/Dashboard.js
+import React, { useEffect, useState, useContext } from "react";
+import { Link } from "react-router-dom";
+import AdminNav from "../../components/AdminNav";
+import axios from "axios";
+import config from "../config/config";
+import { AuthContext } from "../../context/AuthContext";
+import {
+  FaBoxOpen,
+  FaThLarge,
+  FaFileInvoiceDollar,
+  FaImage,
+} from "react-icons/fa";
 
-function Dashboard() {
+// Component to display a single dashboard card
+const DashboardCard = ({ title, link, icon, count }) => {
+  return (
+    <Link
+      to={link}
+      className="flex flex-col items-center justify-center p-8 bg-blue-600 text-white rounded-2xl shadow-lg transition-transform transform hover:scale-105 hover:bg-blue-700 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-500"
+    >
+      <div className="text-4xl sm:text-5xl mb-4">{icon}</div>
+      <h3 className="text-xl sm:text-2xl font-bold text-center">
+        {title}
+        {count !== undefined && (
+          <span className="block text-sm font-normal mt-1">({count} items)</span>
+        )}
+      </h3>
+    </Link>
+  );
+};
+
+const Dashboard = () => {
+  const { token } = useContext(AuthContext);
   const [stats, setStats] = useState({ categories: 0, products: 0, orders: 0 });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function fetchStats() {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
+      setError("");
       try {
         const [catRes, prodRes, orderRes] = await Promise.all([
           axios.get(`${config.backendUrl}/api/categories`),
           axios.get(`${config.backendUrl}/api/products`),
-          axios.get(`${config.backendUrl}/api/admin/orders`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
+          axios.get(`${config.backendUrl}/api/admin/orders`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ]);
 
-        const categoriesCount = Array.isArray(catRes.data.categories) ? catRes.data.categories.length :
-          Array.isArray(catRes.data) ? catRes.data.length : 0;
-        const productsCount = Array.isArray(prodRes.data.products) ? prodRes.data.products.length :
-          Array.isArray(prodRes.data) ? prodRes.data.length : 0;
-        const ordersCount = Array.isArray(orderRes.data.orders) ? orderRes.data.orders.length : 0;
+        // Categories may be { categories: [] } or [] directly
+        const categoriesData = Array.isArray(catRes.data)
+          ? catRes.data
+          : Array.isArray(catRes.data?.categories)
+          ? catRes.data.categories
+          : [];
+        const productsData = Array.isArray(prodRes.data)
+          ? prodRes.data
+          : Array.isArray(prodRes.data?.products)
+          ? prodRes.data.products
+          : [];
+        const ordersData = Array.isArray(orderRes.data)
+          ? orderRes.data
+          : Array.isArray(orderRes.data?.orders)
+          ? orderRes.data.orders
+          : [];
 
         setStats({
-          categories: categoriesCount,
-          products: productsCount,
-          orders: ordersCount,
+          categories: categoriesData.length,
+          products: productsData.length,
+          orders: ordersData.length,
         });
-        setError('');
       } catch (e) {
-        setError('Failed to load statistics');
+        console.error("Failed to fetch admin dashboard stats:", e);
+        setError("Failed to load statistics. Please check your network or try again.");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     fetchStats();
-  }, []);
-
-  const cardStyle = {
-    flex: 1,
-    padding: 30,
-    backgroundColor: '#007bff',
-    color: '#fff',
-    borderRadius: 12,
-    cursor: 'pointer',
-    userSelect: 'none',
-    textAlign: 'center',
-    fontWeight: 'bold',
-    fontSize: 20,
-    boxShadow: '0 6px 12px rgba(0,123,255,0.4)',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '15px',
-    transition: 'background-color 0.3s ease, box-shadow 0.3s ease'
-  };
-
-  const iconStyle = {
-    fontSize: 50
-  };
+  }, [token]);
 
   return (
-    <>
+    <div className="bg-gray-100 min-h-screen">
       <AdminNav />
-      <div style={{ maxWidth: 900, margin: 'auto', padding: 20 }}>
-        <h1>Admin Dashboard</h1>
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <h1 className="text-3xl font-extrabold text-gray-800 mb-8 text-center">
+          Admin Dashboard
+        </h1>
+
         {loading ? (
-          <p>Loading statistics...</p>
+          <div className="text-center text-gray-600 text-lg">
+            <p>Loading statistics...</p>
+          </div>
         ) : error ? (
-          <p style={{ color: 'red' }}>{error}</p>
+          <div className="text-center text-red-500 text-lg">
+            <p>{error}</p>
+          </div>
         ) : (
-          <>
-            <div style={{ display: 'flex', gap: 20, marginBottom: 30 }}>
-              <Card title="Manage Categories" link="/admin/categories" icon="📂" cardStyle={cardStyle} iconStyle={iconStyle} />
-              <Card title="Manage Products" link="/admin/products" icon="🛒" cardStyle={cardStyle} iconStyle={iconStyle} />
-              <Card title="Manage Orders" link="/admin/orders" icon="📋" cardStyle={cardStyle} iconStyle={iconStyle} />
-            </div>
-          </>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <DashboardCard
+              title="Manage Categories"
+              link="/admin/categories"
+              icon={<FaThLarge />}
+              count={stats.categories}
+            />
+            <DashboardCard
+              title="Manage Products"
+              link="/admin/products"
+              icon={<FaBoxOpen />}
+              count={stats.products}
+            />
+            <DashboardCard
+              title="Manage Orders"
+              link="/admin/orders"
+              icon={<FaFileInvoiceDollar />}
+              count={stats.orders}
+            />
+            <DashboardCard
+              title="Manage Banners"
+              link="/admin/banners"
+              icon={<FaImage />}
+            />
+          </div>
         )}
       </div>
-    </>
+    </div>
   );
-}
-
-function Card({ title, link, icon, cardStyle, iconStyle }) {
-  return (
-    <Link
-      to={link}
-      style={{ textDecoration: 'none', flex: 1 }}
-      onMouseEnter={e => {
-        e.currentTarget.firstChild.style.backgroundColor = '#0056b3';
-        e.currentTarget.firstChild.style.boxShadow = '0 8px 16px rgba(0,86,179,0.6)';
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.firstChild.style.backgroundColor = '#007bff';
-        e.currentTarget.firstChild.style.boxShadow = '0 6px 12px rgba(0,123,255,0.4)';
-      }}
-    >
-      <div style={cardStyle}>
-        <div style={iconStyle}>{icon}</div>
-        {title}
-      </div>
-    </Link>
-  );
-}
+};
 
 export default Dashboard;

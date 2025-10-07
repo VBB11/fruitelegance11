@@ -1,11 +1,10 @@
-import React, { useEffect, useState, useContext } from 'react';
-import axios from 'axios';
-import { useNavigate, useParams } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext';
-import { FaPlus, FaSpinner, FaTimesCircle, FaCheckCircle, FaUpload } from 'react-icons/fa';
-import config from '../config/config';
-
-const backendUrl = 'http://localhost:4000';
+// src/pages/admin/ProductForm.js
+import React, { useEffect, useState, useContext } from "react";
+import axios from "axios";
+import { useNavigate, useParams } from "react-router-dom";
+import { AuthContext } from "../../context/AuthContext";
+import { FaPlus, FaSpinner, FaTimesCircle, FaCheckCircle } from "react-icons/fa";
+import config from "../config/config";
 
 function ProductForm() {
   const { id } = useParams(); // product id for edit, undefined for new
@@ -13,43 +12,65 @@ function ProductForm() {
   const { token } = useContext(AuthContext);
 
   const [categories, setCategories] = useState([]);
-  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState("");
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    image: '',
-    price: '',
-    categoryId: '',
+    name: "",
+    description: "",
+    image: "",
+    price: "",
+    categoryId: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  // Combined data fetching for edit and new product modes
+  // Helpers
+  const sortCats = (arr) =>
+    [...arr].sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      setError('');
+      setError("");
       try {
+        // Load admin categories. If you want to only show active ones, pass ?active=true on your admin API.
         const categoriesRes = await axios.get(`${config.backendUrl}/api/admin/categories`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setCategories(categoriesRes.data.categories || categoriesRes.data || []);
-        
+        const rawCats = Array.isArray(categoriesRes.data)
+          ? categoriesRes.data
+          : categoriesRes.data.categories || [];
+        const cats = sortCats(rawCats);
+        setCategories(cats);
+
         if (id) {
+          // Load a single product (public or admin; public is fine for read)
           const productRes = await axios.get(`${config.backendUrl}/api/products/${id}`);
-          const product = productRes.data;
+          const p = productRes.data;
+
+          // Normalize categoryId whether it is populated object, plain id, or missing
+          let normalizedCategoryId = "";
+          if (p?.categoryId) {
+            if (typeof p.categoryId === "string") {
+              normalizedCategoryId = p.categoryId;
+            } else if (typeof p.categoryId === "object") {
+              normalizedCategoryId = p.categoryId._id || "";
+            }
+          } else if (p?.category?._id) {
+            normalizedCategoryId = p.category._id;
+          }
+
           setFormData({
-            name: product.name || '',
-            description: product.description || '',
-            image: product.image || '',
-            price: product.price || '',
-            categoryId: product.categoryId?._id || product.categoryId || '',
+            name: p.name || "",
+            description: p.description || "",
+            image: p.image || "",
+            price: p.price != null ? String(p.price) : "",
+            categoryId: normalizedCategoryId,
           });
         }
       } catch (err) {
-        console.error("Failed to load data:", err);
-        setError('Failed to load product and categories data.');
+        console.error("Failed to load product and categories data:", err);
+        setError("Failed to load product and categories data.");
       } finally {
         setLoading(false);
       }
@@ -59,38 +80,50 @@ function ProductForm() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const addCategory = async () => {
-    if (!newCategoryName.trim()) return;
+    const name = newCategoryName.trim();
+    if (!name) return;
     try {
-      const res = await axios.post(`${config.backendUrl}/api/admin/categories`,
-        { name: newCategoryName.trim() },
+      // Minimal payload; backend will generate slug from name
+      const res = await axios.post(
+        `${config.backendUrl}/api/admin/categories`,
+        { name },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const newCat = res.data;
-      setCategories(prev => [...prev, newCat]);
-      setFormData(prev => ({ ...prev, categoryId: newCat._id }));
-      setNewCategoryName('');
-      setError('');
+      const nextCats = sortCats([...categories, newCat]);
+      setCategories(nextCats);
+      setFormData((prev) => ({ ...prev, categoryId: newCat._id }));
+      setNewCategoryName("");
+      setError("");
     } catch (err) {
-      setError('Failed to add category. Make sure you are logged in as admin.');
+      console.error("Failed to add category:", err);
+      setError("Failed to add category. Make sure you are logged in as admin.");
     }
   };
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!formData.name.trim() || !formData.price || !formData.categoryId) {
-      setError('Product Name, Price, and Category are required.');
+      setError("Product Name, Price, and Category are required.");
       return;
     }
 
     setSaving(true);
     try {
-      const payload = { ...formData, price: Number(formData.price) };
+      const payload = {
+        name: formData.name.trim(),
+        description: formData.description || "",
+        image: formData.image || "",
+        price: Number(formData.price),
+        categoryId: String(formData.categoryId),
+      };
+
       if (id) {
         await axios.put(`${config.backendUrl}/api/admin/products/${id}`, payload, {
           headers: { Authorization: `Bearer ${token}` },
@@ -100,30 +133,34 @@ function ProductForm() {
           headers: { Authorization: `Bearer ${token}` },
         });
       }
-      navigate('/admin/products');
+      navigate("/admin/products");
     } catch (err) {
-      console.error('Failed to save product:', err);
-      setError('Failed to save product. Please check your inputs and try again.');
+      console.error("Failed to save product:", err);
+      setError("Failed to save product. Please check your inputs and try again.");
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-screen text-gray-500">
-      <FaSpinner className="animate-spin mr-3 text-3xl" /> Loading product data...
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="flex items-center justify-center h-screen text-gray-500">
+        <FaSpinner className="animate-spin mr-3 text-3xl" /> Loading product data...
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-gray-100 p-6 md:p-10">
       <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-6 border-b pb-4">
-          {id ? 'Edit' : 'Add'} Product
+          {id ? "Edit" : "Add"} Product
         </h1>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-center space-x-2" role="alert">
+          <div
+            className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-center space-x-2"
+            role="alert"
+          >
             <FaTimesCircle />
             <span>{error}</span>
           </div>
@@ -198,20 +235,24 @@ function ProductForm() {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors appearance-none pr-10"
                   required
                 >
-                  <option value="" disabled>Select a category</option>
-                  {categories.map(c => (
-                    <option key={c._id} value={c._id}>{c.name}</option>
+                  <option value="" disabled>
+                    Select a category
+                  </option>
+                  {categories.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name} {c.slug ? `(/${c.slug})` : ""}
+                    </option>
                   ))}
                 </select>
                 <FaCheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none" />
               </div>
-              
+
               <div className="flex items-center space-x-2 mt-4">
                 <input
                   type="text"
                   placeholder="Add new category"
                   value={newCategoryName}
-                  onChange={e => setNewCategoryName(e.target.value)}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
                   className="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
                 />
                 <button
@@ -225,7 +266,7 @@ function ProductForm() {
               </div>
             </div>
           </div>
-          
+
           <button
             type="submit"
             disabled={saving}
@@ -234,10 +275,10 @@ function ProductForm() {
             {saving ? (
               <>
                 <FaSpinner className="animate-spin" />
-                <span>{id ? 'Updating...' : 'Saving...'}</span>
+                <span>{id ? "Updating..." : "Saving..."}</span>
               </>
             ) : (
-              <span>{id ? 'Update Product' : 'Add Product'}</span>
+              <span>{id ? "Update Product" : "Add Product"}</span>
             )}
           </button>
         </form>

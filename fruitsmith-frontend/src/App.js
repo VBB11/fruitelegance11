@@ -3,7 +3,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthContext, AuthProvider } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
 
-
 import Home from "./pages/Home";
 import ProductDetails from "./pages/ProductDetails";
 import Cart from "./pages/Cart";
@@ -31,6 +30,7 @@ import ProductList from "./pages/admin/ProductList";
 import ProductForm from "./pages/admin/ProductForm";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
+import Banners from "./pages/admin/Banners"; // NEW
 
 import OrderDetail from "./pages/OrderDetail";
 
@@ -41,10 +41,18 @@ import CategoryPage from "./pages/CategoryPage";
 import { CartProvider } from "./context/CartContext";
 
 function AppRoutes() {
-  const { token, user } = useContext(AuthContext);
-
+  const { token, user, loading } = useContext(AuthContext); // ensure AuthContext exposes loading/hydration
   const isAuthenticated = !!token;
   const isAdmin = user?.role === "admin";
+
+  // Prevent redirect flicker while auth is still hydrating
+  if (loading) {
+    return (
+      <div className="pt-16 flex items-center justify-center h-screen text-gray-600">
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <CartProvider>
@@ -54,7 +62,10 @@ function AppRoutes() {
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/product/:id" element={<ProductDetails />} />
+          {/* Backward compatibility for existing categoryName routes */}
           <Route path="/category/:categoryName" element={<CategoryPage />} />
+          {/* Preferred slug route (use this in new links) */}
+          <Route path="/c/:categorySlug" element={<CategoryPage />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/about" element={<About />} />
@@ -162,6 +173,14 @@ function AppRoutes() {
             element={
               <AdminRoute isAuthenticated={isAuthenticated && isAdmin}>
                 <Categories />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/banners" // NEW
+            element={
+              <AdminRoute isAuthenticated={isAuthenticated && isAdmin}>
+                <Banners />
               </AdminRoute>
             }
           />

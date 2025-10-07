@@ -1,11 +1,10 @@
+// src/pages/admin/ProductList.js
 import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import { FaEdit, FaTrash, FaPlus, FaSpinner, FaTimesCircle, FaSearch } from "react-icons/fa";
 import config from "../config/config";
-
-const backendUrl = "http://localhost:4000";
 
 function ProductList() {
   const [products, setProducts] = useState([]);
@@ -16,63 +15,66 @@ function ProductList() {
   const { token } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // New states for search and filter
+  // Search and filter state
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
 
   // Debounce search term
   useEffect(() => {
-    const timerId = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 500);
+    const timerId = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
     return () => clearTimeout(timerId);
   }, [searchTerm]);
 
-  const fetchProducts = async () => {
+  async function fetchData() {
+    if (!token) return;
     setLoading(true);
     setError("");
     try {
-      const query = [];
-      if (debouncedSearchTerm) {
-        query.push(`search=${debouncedSearchTerm}`);
-      }
-      if (selectedCategory) {
-        query.push(`category=${selectedCategory}`);
-      }
-      const queryString = query.length ? `?${query.join("&")}` : "";
-
-      const productsRes = await axios.get(`${config.backendUrl}/api/admin/products${queryString}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setProducts(productsRes.data.products || productsRes.data || []);
-
+      // Load categories for filter dropdown
       const categoriesRes = await axios.get(`${config.backendUrl}/api/admin/categories`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setCategories(categoriesRes.data.categories || categoriesRes.data || []);
+      const rawCats = Array.isArray(categoriesRes.data) ? categoriesRes.data : categoriesRes.data.categories || [];
+      // Sort by sortOrder then created
+      const cats = [...rawCats].sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
+      setCategories(cats);
 
+      // Build query for products: use categoryId not name
+      const params = new URLSearchParams();
+      if (debouncedSearchTerm) params.set("search", debouncedSearchTerm);
+      if (selectedCategoryId) params.set("categoryId", selectedCategoryId);
+      const qs = params.toString() ? `?${params.toString()}` : "";
+
+      const productsRes = await axios.get(`${config.backendUrl}/api/admin/products${qs}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Expect admin API to return products with categoryId populated
+      // e.g., { products: [{ ..., categoryId: { _id, name, slug } }]}
+      const raw = productsRes.data?.products ?? productsRes.data ?? [];
+      setProducts(Array.isArray(raw) ? raw : []);
     } catch (err) {
       console.error("Failed to fetch data:", err);
       setError("Failed to load products. Please ensure you are logged in as an admin.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
-    if (token) fetchProducts();
-  }, [token, debouncedSearchTerm, selectedCategory]);
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, debouncedSearchTerm, selectedCategoryId]);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return;
-
     setDeletingId(id);
     try {
       await axios.delete(`${config.backendUrl}/api/admin/products/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setProducts(products.filter(p => p._id !== id));
+      setProducts((prev) => prev.filter((p) => p._id !== id));
       setError("");
     } catch {
       setError("Failed to delete product.");
@@ -81,9 +83,7 @@ function ProductList() {
     }
   };
 
-  const handleEdit = (id) => {
-    navigate(`/admin/products/edit/${id}`);
-  };
+  const handleEdit = (id) => navigate(`/admin/products/edit/${id}`);
 
   return (
     <div className="min-h-screen bg-gray-100 p-6 md:p-10">
@@ -105,7 +105,7 @@ function ProductList() {
             <span>{error}</span>
           </div>
         )}
-        
+
         <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4 mb-6">
           <div className="relative flex-1 w-full md:w-auto">
             <input
@@ -119,14 +119,14 @@ function ProductList() {
           </div>
 
           <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            value={selectedCategoryId}
+            onChange={(e) => setSelectedCategoryId(e.target.value)}
             className="w-full md:w-auto border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
           >
             <option value="">All Categories</option>
             {categories.map((cat) => (
-              <option key={cat._id} value={cat.name}>
-                {cat.name}
+              <option key={cat._id} value={cat._id}>
+                {cat.name} {cat.slug ? `(/${cat.slug})` : ""}
               </option>
             ))}
           </select>
@@ -141,45 +141,27 @@ function ProductList() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left px-6 py-3 text-gray-600 font-semibold uppercase text-sm tracking-wider">
-                    Name
-                  </th>
-                  <th className="text-left px-6 py-3 text-gray-600 font-semibold uppercase text-sm tracking-wider">
-                    Category
-                  </th>
-                  <th className="text-left px-6 py-3 text-gray-600 font-semibold uppercase text-sm tracking-wider">
-                    Price (₹)
-                  </th>
-                  <th className="text-center px-6 py-3 text-gray-600 font-semibold uppercase text-sm tracking-wider">
-                    Actions
-                  </th>
+                  <th className="text-left px-6 py-3 text-gray-600 font-semibold uppercase text-sm tracking-wider">Name</th>
+                  <th className="text-left px-6 py-3 text-gray-600 font-semibold uppercase text-sm tracking-wider">Category</th>
+                  <th className="text-left px-6 py-3 text-gray-600 font-semibold uppercase text-sm tracking-wider">Price (₹)</th>
+                  <th className="text-center px-6 py-3 text-gray-600 font-semibold uppercase text-sm tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {products.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={4}
-                      className="text-center py-6 text-gray-500 italic"
-                    >
+                    <td colSpan={4} className="text-center py-6 text-gray-500 italic">
                       No products found.
                     </td>
                   </tr>
                 ) : (
                   products.map((p) => (
-                    <tr
-                      key={p._id}
-                      className="hover:bg-gray-50 transition"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-900 font-medium">
-                        {p.name}
-                      </td>
+                    <tr key={p._id} className="hover:bg-gray-50 transition">
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-900 font-medium">{p.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-gray-600">
-                        {p.categoryId?.name || "N/A"}
+                        {p.categoryId?.name || p.category?.name || "N/A"}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-600">
-                        ₹{p.price}
-                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-600">₹{p.price}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-center space-x-2">
                         <button
                           onClick={() => handleEdit(p._id)}
@@ -191,7 +173,9 @@ function ProductList() {
                         <button
                           onClick={() => handleDelete(p._id)}
                           disabled={deletingId === p._id}
-                          className={`text-red-600 hover:text-red-800 transition-colors ${deletingId === p._id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          className={`text-red-600 hover:text-red-800 transition-colors ${
+                            deletingId === p._id ? "opacity-50 cursor-not-allowed" : ""
+                          }`}
                           aria-label={`Delete ${p.name}`}
                         >
                           {deletingId === p._id ? <FaSpinner className="animate-spin" /> : <FaTrash size={20} />}

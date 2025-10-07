@@ -13,6 +13,9 @@ const orderRoutes = require('./routes/orderRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const adminOrdersRoutes = require('./routes/adminOrder');
 
+// NEW: banner routes
+const bannerRoutes = require('./routes/bannerRoutes');
+
 const { verifyToken, verifyAdmin } = require('./middleware/auth');
 
 const app = express();
@@ -48,7 +51,7 @@ app.use((req, res, next) => {
 
 // Mount routers
 // IMPORTANT: Use the router from the exported object
-app.use('/api/auth', authModule.router); // => /api/auth/guest-checkout
+app.use('/api/auth', authModule.router); // => /api/auth/*
 
 // Optional quick health to verify mount; remove after testing
 app.get('/api/auth/health', (req, res) => res.json({ ok: true }));
@@ -56,10 +59,20 @@ app.get('/api/auth/health', (req, res) => res.json({ ok: true }));
 app.use('/api/user', userRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payment', paymentRoutes);
+
+// Categories: public vs admin
 app.use('/api/categories', categoryRoutes.publicRoutes);
 app.use('/api/admin/categories', verifyToken, verifyAdmin, categoryRoutes.adminRoutes);
+
+// Products: public vs admin
 app.use('/api/products', productRoutes.publicRoutes);
 app.use('/api/admin/products', verifyToken, verifyAdmin, productRoutes.adminRoutes);
+
+// Banners: public vs admin (NEW)
+app.use('/api/banners', bannerRoutes.publicRoutes);
+app.use('/api/admin/banners', verifyToken, verifyAdmin, bannerRoutes.adminRoutes);
+
+// Admin orders (kept as-is)
 app.use('/api/admin', verifyToken, verifyAdmin, adminOrdersRoutes);
 
 // Base route
