@@ -11,11 +11,11 @@ const productSchema = new mongoose.Schema({
     trim: true,
     default: '',
   },
-  image: {
+  image: [{
     type: String,
     trim: true,
     default: '',
-  },
+  }],
   price: {
     type: Number,
     required: [true, 'Price is required'],

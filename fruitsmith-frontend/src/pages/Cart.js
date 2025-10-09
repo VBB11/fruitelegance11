@@ -83,8 +83,8 @@ function Cart() {
     guestForm;
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * (item.qty || 1), 0);
-  const deliveryFeeThreshold = 999;
-  const deliveryFee = subtotal >= deliveryFeeThreshold ? 0 : 50;
+  const deliveryFeeThreshold = 1999;
+  const deliveryFee = subtotal >= deliveryFeeThreshold ? 0 : 119;
   const totalPrice = subtotal + deliveryFee;
 
   const handleProceed = () => {
@@ -377,7 +377,7 @@ function Cart() {
                 ) : (
                   <>
                     <FaExclamationCircle size={20} />
-                    <p>Shop for **₹{(deliveryFeeThreshold - subtotal).toFixed(2)}** more to get free delivery.</p>
+                    <p>Shop for **₹{(deliveryFeeThreshold - subtotal).toFixed(2)}** more to grab a free delivery.</p>
                   </>
                 )}
               </div>

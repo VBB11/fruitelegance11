@@ -47,40 +47,6 @@ const FALLBACK_BANNERS = [
   },
 ];
 
-// Fallback categories (used until backend returns data)
-const FALLBACK_CATEGORIES = [
-  {
-    label: "Everyday Fruits",
-    image: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png",
-    bg: "bg-yellow-50",
-  },
-  {
-    label: "Tropical Fruits",
-    image: "https://cdn-icons-png.flaticon.com/512/590/590779.png",
-    bg: "bg-orange-50",
-  },
-  {
-    label: "Dried Fruits & Nuts",
-    image: "https://cdn-icons-png.flaticon.com/512/1625/1625048.png",
-    bg: "bg-amber-50",
-  },
-  {
-    label: "Fruit Gift Boxes or Combos",
-    image: "https://cdn-icons-png.flaticon.com/512/3081/3081559.png",
-    bg: "bg-pink-50",
-  },
-  {
-    label: "Seasonal Fruits",
-    image: "https://cdn-icons-png.flaticon.com/512/4155/4155886.png",
-    bg: "bg-green-50",
-  },
-  {
-    label: "Exotic Fruits",
-    image: "https://cdn-icons-png.flaticon.com/512/2909/2909837.png",
-    bg: "bg-purple-50",
-  },
-];
-
 const whyChooseUsFeatures = [
   {
     icon: FaSeedling,
@@ -107,43 +73,6 @@ const whyChooseUsFeatures = [
     desc: "Your transactions are protected with the highest level of security.",
   },
 ];
-
-// Category pills (presentational)
-function Categories({ selectedCategory, onSelectCategory, items }) {
-  return (
-    <section className="max-w-7xl mx-auto rounded-2xl bg-white shadow-md py-8 px-4 sm:px-6 my-10 relative z-30">
-      <h2 className="text-2xl sm:text-3xl font-extrabold mb-6 text-gray-900 text-center">
-        Shop by Category
-      </h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 sm:gap-6">
-        {items.map(({ label, image, bg }, idx) => (
-          <button
-            key={`${label}-${idx}`}
-            onClick={() =>
-              onSelectCategory(selectedCategory === label ? null : label)
-            }
-            className={`flex flex-col items-center rounded-xl ${bg} p-3 sm:p-5 cursor-pointer transition ${
-              selectedCategory === label
-                ? "ring ring-green-400 ring-offset-2"
-                : "hover:shadow-xl"
-            }`}
-            aria-pressed={selectedCategory === label}
-          >
-            <img
-              src={image}
-              alt={label}
-              className="w-12 h-12 sm:w-16 sm:h-16 mb-2 object-contain"
-              loading="lazy"
-            />
-            <span className="text-center text-sm sm:text-base font-medium">
-              {label}
-            </span>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
 
 // Quick view modal for products
 const QuickViewModal = ({ product, onClose, handleAdd }) => {
@@ -328,7 +257,6 @@ export default function Home() {
 
   // Dynamic meta lists with fallback
   const [bannerItems, setBannerItems] = useState(FALLBACK_BANNERS);
-  const [categoryItems, setCategoryItems] = useState(FALLBACK_CATEGORIES);
 
   // UI state
   const [error, setError] = useState("");
@@ -343,8 +271,6 @@ export default function Home() {
   });
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState(null); // hidden id for robust filtering
   const [showFavorites, setShowFavorites] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
 
@@ -430,55 +356,21 @@ export default function Home() {
     };
   }, []);
 
-  // Load categories (public active categories)
-  useEffect(() => {
-    let ignore = false;
-    async function loadCategories() {
-      try {
-        const res = await axios.get(`${config.backendUrl}/api/categories`);
-        const list = Array.isArray(res.data)
-          ? res.data
-          : res.data?.categories || [];
-        if (!ignore && list.length) {
-          const mapped = list.map((c) => ({
-            id: c._id || c.id,
-            label: c.name || c.label || c.title || "Category",
-            image:
-              c.image ||
-              c.icon ||
-              "https://cdn-icons-png.flaticon.com/512/4155/4155886.png",
-            bg: c.bg || "bg-green-50",
-            slug: c.slug,
-          }));
-          setCategoryItems(mapped);
-        }
-      } catch {
-        // keep fallback
-      }
-    }
-    loadCategories();
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
   // Apply incoming category selection from state or ?category=slug
   useEffect(() => {
     // Prefer state if provided by navigate("/", { state: { categorySlug } })
     const stateSlug = location.state?.categorySlug;
     const querySlug = getCategorySlugFromQuery(location.search);
     const wantedSlug = stateSlug || querySlug;
-    if (!wantedSlug || categoryItems.length === 0) return;
-
-    const match = categoryItems.find((c) => c.slug === wantedSlug);
-    if (match) {
-      setSelectedCategory(match.label);
-      setSelectedCategoryId(match.id || null);
-      // If state was used, clean it so back/forward is tidy
-      if (stateSlug) navigate("/", { replace: true, state: {} });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.key, location.search, location.state, categoryItems]);
+    if (!wantedSlug) return;
+  
+    // This effect is no longer needed since you are removing categories.
+    // However, if other parts of the app rely on this, you'd need to
+    // handle the navigation cleanup. For this example, we'll keep the
+    // cleanup logic but remove the category-specific state setting.
+    if (stateSlug) navigate("/", { replace: true, state: {} });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key, location.search, location.state]);
 
   // Persist favorites
   useEffect(() => {
@@ -493,27 +385,6 @@ export default function Home() {
       filtered = filtered.filter((p) => favorites.includes(p._id));
     }
 
-    // Prefer id-based match; fallback to name
-    if (selectedCategory || selectedCategoryId) {
-      filtered = filtered.filter((p) => {
-        const byId =
-          selectedCategoryId &&
-          (typeof p.categoryId === "string"
-            ? String(p.categoryId) === String(selectedCategoryId)
-            : String(p.categoryId?._id) === String(selectedCategoryId) ||
-              String(p.category?._id) === String(selectedCategoryId));
-        if (byId) return true;
-
-        const name =
-          p.category?.name ||
-          p.categoryName ||
-          p.categoryId?.name ||
-          p.category ||
-          "";
-        return selectedCategory ? name === selectedCategory : false;
-      });
-    }
-
     const min = parseFloat(minPrice);
     const max = parseFloat(maxPrice);
 
@@ -525,8 +396,6 @@ export default function Home() {
     products,
     favorites,
     showFavorites,
-    selectedCategory,
-    selectedCategoryId,
     minPrice,
     maxPrice,
   ]);
@@ -567,8 +436,6 @@ export default function Home() {
   const resetFilters = () => {
     setMinPrice("");
     setMaxPrice("");
-    setSelectedCategory(null);
-    setSelectedCategoryId(null);
     setShowFavorites(false);
     // Also clean ?category= from URL for clarity
     if (getCategorySlugFromQuery(location.search)) {
@@ -644,19 +511,7 @@ export default function Home() {
       {/* Firepanti Decorations */}
       {leftPanti}
       {rightPanti}
-
-      {/* Categories with Selection */}
-      <Categories
-        selectedCategory={selectedCategory}
-        onSelectCategory={setSelectedCategory}
-        items={categoryItems}
-      />
-
-      {/* Products Header */}
-      <h1 className="text-3xl sm:text-4xl font-extrabold text-green-800 my-8 text-center">
-        Our Fresh Products
-      </h1>
-
+      
       {/* Enhanced Filter Controls */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
         <div className="bg-white rounded-2xl shadow-md p-4 sm:p-6 relative z-30">
@@ -709,14 +564,9 @@ export default function Home() {
           </div>
 
           {/* Active Filters Display */}
-          {(selectedCategory || minPrice || maxPrice || showFavorites) && (
+          {(minPrice || maxPrice || showFavorites) && (
             <div className="flex flex-wrap gap-2 justify-center">
               <span className="text-sm text-gray-600">Active filters:</span>
-              {selectedCategory && (
-                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                  Category: {selectedCategory}
-                </span>
-              )}
               {minPrice && (
                 <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
                   Min: ₹{minPrice}
@@ -736,6 +586,11 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      {/* Products Header */}
+      <h1 className="text-3xl sm:text-4xl font-extrabold text-green-800 my-8 text-center">
+        Our Fresh Products
+      </h1>
 
       {/* Results Count */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
@@ -847,7 +702,6 @@ export default function Home() {
                 <li><Link to="/contact" className="text-green-100 hover:text-yellow-300 transition-colors">Contact Us</Link></li>
                 <li><Link to="/faq" className="text-green-100 hover:text-yellow-300 transition-colors">FAQ</Link></li>
                 <li><Link to="/shipping" className="text-green-100 hover:text-yellow-300 transition-colors">Shipping Info</Link></li>
-                <li><Link to="/returns" className="text-green-100 hover:text-yellow-300 transition-colors">Returns & Refunds</Link></li>
                 <li><Link to="/support" className="text-green-100 hover:text-yellow-300 transition-colors">24/7 Support</Link></li>
               </ul>
             </div>
@@ -857,11 +711,11 @@ export default function Home() {
               <div className="space-y-3 text-green-100 text-sm">
                 <div className="flex items-center gap-2">
                   <span>📞</span>
-                  <span>+91 98765 43210</span>
+                  <span>+91 9988112393</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span>✉️</span>
-                  <span>info@fruitelegance.com</span>
+                  <span>fruitelegancee@gmail.com</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span>📍</span>
@@ -895,7 +749,7 @@ export default function Home() {
                   <a href="https://www.instagram.com/fruit_elegancee" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full hover:bg-green-700 transition-colors">
                     <img src="https://www.vectorlogo.zone/logos/instagram/instagram-icon.svg" alt="Instagram" className="h-6 w-6"/>
                   </a>
-                  <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full hover:bg-green-700 transition-colors">
+                  <a href="https://wa.me/9988112393" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full hover:bg-green-700 transition-colors">
                     <img src="https://www.vectorlogo.zone/logos/whatsapp/whatsapp-icon.svg" alt="WhatsApp" className="h-6 w-6"/>
                   </a>
                 </div>

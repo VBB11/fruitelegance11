@@ -53,15 +53,15 @@ function About() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-lg">
             <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl shadow-sm">
               <FaEnvelope className="text-green-700" size={24} />
-              <p>support@fruitsmith.com</p>
+              <p> Fruitelegancee@gmail.com</p>
             </div>
             <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl shadow-sm">
               <FaPhone className="text-green-700" size={24} />
-              <p>+91 98765 43210</p>
+              <p>+91 99881 12393</p>
             </div>
             <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl shadow-sm">
               <FaMapMarkerAlt className="text-green-700" size={24} />
-              <p>456 Orchard Road, Green City, India</p>
+              <p>Pune, India</p>
             </div>
           </div>
         </div>

@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import Slider from "react-slick"; // Import Slider
 import { FaChevronLeft, FaHeart, FaRegHeart, FaRulerCombined, FaTag, FaTruck, FaClock, FaStar, FaStarHalfAlt, FaGift, FaMoneyBillWave, FaTruckLoading, FaCalendarCheck, FaBoxes, FaLeaf, FaSeedling } from "react-icons/fa";
 import { RiSecurePaymentLine, RiMistLine } from "react-icons/ri";
 import { useCart } from "../context/CartContext";
 import config from '../../src/pages/config/config';
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+
 const placeholderImage =
   "https://cdn.pixabay.com/photo/2016/04/01/10/07/fruit-1303048_1280.png";
 
@@ -54,7 +58,12 @@ const ProductDetailPage = () => {
       setLoading(true);
       try {
         const productRes = await axios.get(`${config.backendUrl}/api/products/${id}`);
-        setProduct(productRes.data);
+        // Ensure images is an array, even if a single image is returned
+        const fetchedProduct = productRes.data;
+        if (!fetchedProduct.images || !Array.isArray(fetchedProduct.images)) {
+          fetchedProduct.images = [fetchedProduct.image || placeholderImage];
+        }
+        setProduct(fetchedProduct);
 
         const allProductsRes = await axios.get(`${config.backendUrl}/api/products`);
         const filteredOthers = allProductsRes.data
@@ -124,6 +133,17 @@ const ProductDetailPage = () => {
     }
     return stars;
   };
+  
+  // Slider settings for product images
+  const sliderSettings = {
+    dots: true,
+    infinite: product?.images?.length > 1,
+    speed: 500,
+    slidesToShow: 1,
+    slidesToScroll: 1,
+    arrows: false,
+    autoplay: false,
+  };
 
   if (loading) {
     return (
@@ -155,11 +175,25 @@ const ProductDetailPage = () => {
           <div className="flex flex-col md:flex-row gap-12 items-start">
             <div className="flex-1">
               <div className="w-full max-w-md p-4 rounded-3xl shadow-lg bg-white relative">
-                <img
-                  src={product.image || placeholderImage}
-                  alt={product.name}
-                  className="w-full aspect-square object-contain rounded-xl hover:scale-105 transition-transform duration-300 shadow-md"
-                />
+                {product.images && product.images.length > 1 ? (
+                  <Slider {...sliderSettings}>
+                    {product.images.map((img, index) => (
+                      <div key={index}>
+                        <img
+                          src={img || placeholderImage}
+                          alt={`${product.name} image ${index + 1}`}
+                          className="w-full aspect-square object-contain rounded-xl hover:scale-105 transition-transform duration-300 shadow-md"
+                        />
+                      </div>
+                    ))}
+                  </Slider>
+                ) : (
+                  <img
+                    src={product.image || placeholderImage}
+                    alt={product.name}
+                    className="w-full aspect-square object-contain rounded-xl hover:scale-105 transition-transform duration-300 shadow-md"
+                  />
+                )}
                 <button
                   aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
                   onClick={() => toggleFavorite(product._id)}
@@ -221,7 +255,21 @@ const ProductDetailPage = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         <div className="flex items-center justify-center bg-gray-50 rounded-2xl p-6 relative">
-          <img src={product.image || placeholderImage} alt={product.name} className="w-full h-auto max-h-[400px] object-contain" />
+          {product.images && product.images.length > 1 ? (
+            <Slider {...sliderSettings} className="w-full">
+              {product.images.map((img, index) => (
+                <div key={index}>
+                  <img
+                    src={img || placeholderImage}
+                    alt={`${product.name} image ${index + 1}`}
+                    className="w-full h-auto max-h-[400px] object-contain"
+                  />
+                </div>
+              ))}
+            </Slider>
+          ) : (
+            <img src={product.image || placeholderImage} alt={product.name} className="w-full h-auto max-h-[400px] object-contain" />
+          )}
           <button aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"} onClick={() => toggleFavorite(product._id)} className="absolute top-5 right-5 z-10 text-red-600 hover:text-red-700 transition-colors">
             {isFavorite ? <FaHeart size={24} /> : <FaRegHeart size={24} />}
           </button>
@@ -354,7 +402,7 @@ const ProductDetailPage = () => {
                     className="flex items-center gap-4 bg-green-50 rounded-xl p-3 hover:bg-green-100 transition"
                   >
                     <img
-                      src={op.image || placeholderImage}
+                      src={op.image || op.images?.[0] || placeholderImage}
                       alt={op.name}
                       className="w-16 h-16 object-cover rounded-lg shadow-sm"
                     />

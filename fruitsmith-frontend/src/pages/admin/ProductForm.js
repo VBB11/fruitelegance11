@@ -3,11 +3,11 @@ import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
-import { FaPlus, FaSpinner, FaTimesCircle, FaCheckCircle } from "react-icons/fa";
+import { FaPlus, FaSpinner, FaTimesCircle, FaCheckCircle, FaTrash } from "react-icons/fa";
 import config from "../config/config";
 
 function ProductForm() {
-  const { id } = useParams(); // product id for edit, undefined for new
+  const { id } = useParams();
   const navigate = useNavigate();
   const { token } = useContext(AuthContext);
 
@@ -16,7 +16,8 @@ function ProductForm() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    image: "",
+    mainImage: "",      // Main product image URL
+    extraImages: [],    // Array of additional image URLs
     price: "",
     categoryId: "",
   });
@@ -24,7 +25,6 @@ function ProductForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Helpers
   const sortCats = (arr) =>
     [...arr].sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
 
@@ -33,7 +33,6 @@ function ProductForm() {
       setLoading(true);
       setError("");
       try {
-        // Load admin categories. If you want to only show active ones, pass ?active=true on your admin API.
         const categoriesRes = await axios.get(`${config.backendUrl}/api/admin/categories`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -44,11 +43,9 @@ function ProductForm() {
         setCategories(cats);
 
         if (id) {
-          // Load a single product (public or admin; public is fine for read)
           const productRes = await axios.get(`${config.backendUrl}/api/products/${id}`);
           const p = productRes.data;
 
-          // Normalize categoryId whether it is populated object, plain id, or missing
           let normalizedCategoryId = "";
           if (p?.categoryId) {
             if (typeof p.categoryId === "string") {
@@ -60,10 +57,17 @@ function ProductForm() {
             normalizedCategoryId = p.category._id;
           }
 
+          let productMainImage = p.images?.[0] || p.image || "";
+          let productExtraImages = [];
+          if (p.images && p.images.length > 1) {
+            productExtraImages = p.images.slice(1);
+          }
+
           setFormData({
             name: p.name || "",
             description: p.description || "",
-            image: p.image || "",
+            mainImage: productMainImage,
+            extraImages: productExtraImages,
             price: p.price != null ? String(p.price) : "",
             categoryId: normalizedCategoryId,
           });
@@ -83,11 +87,25 @@ function ProductForm() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleExtraImageChange = (index, value) => {
+    const newImages = [...formData.extraImages];
+    newImages[index] = value;
+    setFormData({ ...formData, extraImages: newImages });
+  };
+
+  const addExtraImageInput = () => {
+    setFormData({ ...formData, extraImages: [...formData.extraImages, ""] });
+  };
+
+  const removeExtraImageInput = (index) => {
+    const newImages = formData.extraImages.filter((_, i) => i !== index);
+    setFormData({ ...formData, extraImages: newImages });
+  };
+
   const addCategory = async () => {
     const name = newCategoryName.trim();
     if (!name) return;
     try {
-      // Minimal payload; backend will generate slug from name
       const res = await axios.post(
         `${config.backendUrl}/api/admin/categories`,
         { name },
@@ -114,12 +132,20 @@ function ProductForm() {
       return;
     }
 
+    if (!formData.mainImage.trim()) {
+      setError("A main product image is required.");
+      return;
+    }
+
     setSaving(true);
     try {
+      const filteredExtraImages = formData.extraImages.filter(url => url.trim() !== "");
+      const allImages = [formData.mainImage.trim(), ...filteredExtraImages];
+
       const payload = {
         name: formData.name.trim(),
         description: formData.description || "",
-        image: formData.image || "",
+        images: allImages, // Send the combined array
         price: Number(formData.price),
         categoryId: String(formData.categoryId),
       };
@@ -193,20 +219,66 @@ function ProductForm() {
               />
             </div>
 
+            {/* Main Image URL */}
             <div>
-              <label className="block text-gray-700 font-semibold mb-2">Image URL</label>
+              <label className="block text-gray-700 font-semibold mb-2">Main Product Image URL</label>
               <input
                 type="url"
-                name="image"
-                value={formData.image}
+                name="mainImage"
+                value={formData.mainImage}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
-                placeholder="http://example.com/image.jpg"
+                placeholder="http://example.com/main-image.jpg"
+                required
               />
-              {formData.image && (
+              {formData.mainImage && (
                 <div className="mt-4 border border-gray-300 rounded-lg overflow-hidden">
-                  <p className="text-sm text-gray-500 bg-gray-100 p-2 font-semibold">Image Preview:</p>
-                  <img src={formData.image} alt="Product Preview" className="w-full h-auto object-contain p-2" />
+                  <p className="text-sm text-gray-500 bg-gray-100 p-2 font-semibold">Main Image Preview:</p>
+                  <img src={formData.mainImage} alt="Main Product Preview" className="w-full h-auto object-contain p-2" />
+                </div>
+              )}
+            </div>
+
+            {/* Extra Images URLS */}
+            <div className="border-t border-gray-200 pt-6">
+              <label className="block text-gray-700 font-semibold mb-2">Extra Product Images (Optional)</label>
+              {formData.extraImages.map((image, index) => (
+                <div key={index} className="flex items-center space-x-2 mb-2">
+                  <input
+                    type="url"
+                    value={image}
+                    onChange={(e) => handleExtraImageChange(index, e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                    placeholder={`Extra Image URL ${index + 1}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeExtraImageInput(index)}
+                    className="text-red-500 hover:text-red-700 transition-colors p-2"
+                    aria-label="Remove image"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addExtraImageInput}
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors flex items-center space-x-2 mt-2"
+              >
+                <FaPlus />
+                <span>Add Another Image</span>
+              </button>
+              
+              {/* Extra Image Previews */}
+              {formData.extraImages.length > 0 && (
+                <div className="mt-4 border border-gray-300 rounded-lg overflow-hidden p-2">
+                  <p className="text-sm text-gray-500 bg-gray-100 p-2 font-semibold">Extra Image Previews:</p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.extraImages.filter(url => url.trim() !== "").map((url, index) => (
+                      <img key={index} src={url} alt={`Extra Product Preview ${index + 1}`} className="w-24 h-24 object-contain border border-gray-200 rounded-lg p-1" />
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
