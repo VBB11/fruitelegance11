@@ -60,7 +60,7 @@ function Navbar() {
       <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center">
         <Link to="/">
           <img
-            src="/images/felogo.png"
+            src="/images/felogo1.png"
             alt="Fruit Elegance Logo"
             className="w-20 h-20 object-contain drop-shadow-sm min-w-[72px] min-h-[72px]"
             draggable={false}
