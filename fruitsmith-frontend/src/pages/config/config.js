@@ -1,5 +1,5 @@
 const config = {
-    backendUrl: "https://backend.fruitelegance.in",
+    backendUrl: "/api",
     withCredentials: true
 }
 
