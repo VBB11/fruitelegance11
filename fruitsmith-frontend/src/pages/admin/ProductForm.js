@@ -57,10 +57,12 @@ function ProductForm() {
             normalizedCategoryId = p.category._id;
           }
 
-          let productMainImage = p.images?.[0] || p.image || "";
+          let productMainImage = p.images?.[0] || p.image?.[0] || "";
           let productExtraImages = [];
           if (p.images && p.images.length > 1) {
             productExtraImages = p.images.slice(1);
+          } else if (p.image && p.image.length > 1) {
+            productExtraImages = p.image.slice(1);
           }
 
           setFormData({
@@ -145,7 +147,7 @@ function ProductForm() {
       const payload = {
         name: formData.name.trim(),
         description: formData.description || "",
-        images: allImages, // Send the combined array
+        image: allImages, // Changed from 'images' to 'image' to match the Mongoose schema
         price: Number(formData.price),
         categoryId: String(formData.categoryId),
       };
