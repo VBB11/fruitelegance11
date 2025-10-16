@@ -57,7 +57,14 @@ app.use('/api/auth', authModule.router); // => /api/auth/*
 app.get('/api/auth/health', (req, res) => res.json({ ok: true }));
 
 app.use('/api/user', userRoutes);
+
+// Mount the order routes
 app.use('/api/orders', orderRoutes);
+
+// NEW: Add a specific route for payment verification
+// This is needed because the frontend makes a separate call to this endpoint
+app.post('/api/orders/verify-payment', verifyToken, orderRoutes);
+
 app.use('/api/payment', paymentRoutes);
 
 // Categories: public vs admin

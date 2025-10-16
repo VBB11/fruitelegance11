@@ -1,9 +1,21 @@
 const Order = require('../models/Order');
 const Product = require('../models/Products');
 const User = require('../models/User');
+const Razorpay = require('razorpay');
 
 const { transporter } = require('../routes/auth');
 
+// Initialize Razorpay with your key ID and key secret from environment variables
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
+
+// Centralized pricing constants
+const deliveryFeeThreshold = 1999;
+const deliveryFeeAmount = 119;
+
+// Helper function to create a product snapshot from cart data
 const createOrderItemsSnapshot = async (cartItems) => {
   const productIds = cartItems.map(item => item._id);
   const products = await Product.find({ '_id': { $in: productIds } });
@@ -28,32 +40,82 @@ const createOrderItemsSnapshot = async (cartItems) => {
 
 exports.createOrder = async (req, res) => {
   try {
-    const { cart, shippingAddress, totalAmount, paymentId } = req.body;
+    const { cart, shippingAddress } = req.body;
     const userId = req.user.id || req.user._id;
 
     if (!userId) return res.status(401).json({ error: 'Unauthorized: User ID missing' });
     if (!cart || cart.length === 0) return res.status(400).json({ error: 'Cart is empty.' });
-    if (!paymentId) return res.status(400).json({ error: 'Payment ID is required.' });
-
+    
+    // Step 1: Create a secure snapshot of order items and calculate subtotal
     const orderItems = await createOrderItemsSnapshot(cart);
+    const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.qty, 0);
 
+    // Step 2: Calculate delivery fee and final total on the backend
+    const deliveryFee = subtotal >= deliveryFeeThreshold ? 0 : deliveryFeeAmount;
+    const finalPrice = subtotal + deliveryFee;
+
+    // Step 3: Create a Razorpay order with the final calculated price
+    const razorpayOrder = await razorpay.orders.create({
+      amount: finalPrice * 100, // Razorpay amount is in paise
+      currency: "INR",
+      receipt: "receipt_id_" + Date.now(),
+    });
+
+    // Step 4: Create a new order document to save to DB (with a 'Pending' status)
     const newOrder = new Order({
       userId,
       items: orderItems,
       shippingAddress,
-      totalAmount,
-      status: 'Processing',
-      paymentInfo: { paymentId, method: 'razorpay' },
+      totalAmount: finalPrice, // Save the final calculated price
+      status: 'Pending', // Set status to pending initially
+      paymentInfo: {
+        orderId: razorpayOrder.id,
+        // We can add a placeholder for paymentId here if needed
+      }
     });
-
+    
+    // Step 5: Save the order to get its _id
     const savedOrder = await newOrder.save();
 
-    const user = await User.findById(userId);
+    // Step 6: Send the Razorpay order details back to the frontend
+    res.status(201).json({
+      orderId: savedOrder.paymentInfo.orderId,
+      key: process.env.RAZORPAY_KEY_ID,
+      amount: finalPrice * 100,
+      orderDocId: savedOrder._id // Send the database document ID
+    });
+
+  } catch (err) {
+    console.error('Error creating order:', err);
+    res.status(500).json({ error: err.message || 'Failed to create order.' });
+  }
+};
+
+exports.verifyPaymentAndUpdateOrder = async (req, res) => {
+  try {
+    const { orderDocId, paymentId } = req.body;
+    const userId = req.user.id || req.user._id;
+
+    const order = await Order.findOne({ _id: orderDocId, userId });
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found.' });
+    }
+
+    // You would typically add a signature verification step here for security
+    // to ensure the request is from Razorpay and not a malicious user.
+    // For now, we'll assume the paymentId is valid.
+
+    order.paymentInfo.paymentId = paymentId;
+    order.status = 'Processing';
+    await order.save();
+
+    // Send order confirmation email
+    const user = await User.findById(order.userId);
     if (user && user.email) {
       const mailOptions = {
         from: process.env.GMAIL_USER,
         to: user.email,
-        subject: `Order Confirmation - #${savedOrder._id}`,
+        subject: `Order Confirmation - #${order._id}`,
         html: `
         <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; text-align: center;">
           <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; margin: auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
@@ -72,23 +134,23 @@ exports.createOrder = async (req, res) => {
                 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 20px; border-collapse: collapse;">
                   <tr>
                     <td style="background-color: #f9f9f9; padding: 10px; border-bottom: 1px solid #ddd; font-weight: bold;">Order ID:</td>
-                    <td style="background-color: #f9f9f9; padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">${savedOrder._id}</td>
+                    <td style="background-color: #f9f9f9; padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">${order._id}</td>
                   </tr>
                   <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd; font-weight: bold;">Total Amount:</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right; color: #2c6f3c; font-weight: bold;">₹${savedOrder.totalAmount}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right; color: #2c6f3c; font-weight: bold;">₹${order.totalAmount}</td>
                   </tr>
                   <tr>
                     <td style="background-color: #f9f9f9; padding: 10px; font-weight: bold;">Order Status:</td>
-                    <td style="background-color: #f9f9f9; padding: 10px; text-align: right;"><span style="background-color: #1a73e8; color: #fff; padding: 4px 8px; border-radius: 12px; font-size: 12px; text-transform: uppercase;">${savedOrder.status}</span></td>
+                    <td style="background-color: #f9f9f9; padding: 10px; text-align: right;"><span style="background-color: #1a73e8; color: #fff; padding: 4px 8px; border-radius: 12px; font-size: 12px; text-transform: uppercase;">${order.status}</span></td>
                   </tr>
                 </table>
 
                 <h3 style="font-size: 18px; margin-top: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">Order Details</h3>
                 <ul style="list-style-type: none; padding: 0; margin: 0;">
-                  ${savedOrder.items.map(item => `
+                  ${order.items.map(item => `
                     <li style="padding: 10px 0; border-bottom: 1px solid #eee; display: flex; align-items: center;">
-                      <img src="${item.image || 'https://cdn.pixabay.com/photo/2016/04/01/10/07/fruit-1303048_1280.png'}" alt="${item.name}" style="width: 50px; height: 50px; object-fit: contain; margin-right: 15px; border-radius: 4px;">
+                      <img src="${item.image?.[0] || 'https://cdn.pixabay.com/photo/2016/04/01/10/07/fruit-1303048_1280.png'}" alt="${item.name}" style="width: 50px; height: 50px; object-fit: contain; margin-right: 15px; border-radius: 4px;">
                       <div style="flex-grow: 1;">
                         <p style="margin: 0; font-weight: bold; color: #333;">${item.name}</p>
                         <p style="margin: 0; font-size: 14px; color: #777;">Quantity: ${item.qty}</p>
@@ -100,10 +162,10 @@ exports.createOrder = async (req, res) => {
 
                 <h3 style="font-size: 18px; margin-top: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">Shipping Address</h3>
                 <p style="margin: 0; color: #555; font-size: 16px;">
-                  <strong>${savedOrder.shippingAddress.name}</strong><br>
-                  ${savedOrder.shippingAddress.street}, ${savedOrder.shippingAddress.city}<br>
-                  ${savedOrder.shippingAddress.state}, ${savedOrder.shippingAddress.zip}, ${savedOrder.shippingAddress.country}<br>
-                  Mobile: ${savedOrder.shippingAddress.mobile}
+                  <strong>${order.shippingAddress.name}</strong><br>
+                  ${order.shippingAddress.street}, ${order.shippingAddress.city}<br>
+                  ${order.shippingAddress.state}, ${order.shippingAddress.zip}, ${order.shippingAddress.country}<br>
+                  Mobile: ${order.shippingAddress.mobile}
                 </p>
 
                 <p style="margin-top: 30px; font-size: 14px; color: #999;">If you have any questions, please feel free to contact us.</p>
@@ -127,10 +189,11 @@ exports.createOrder = async (req, res) => {
       }
     }
 
-    res.status(201).json(savedOrder);
+    res.status(200).json({ message: 'Payment verified and order updated.' });
+
   } catch (err) {
-    console.error('Error creating order:', err);
-    res.status(500).json({ error: err.message || 'Failed to create order.' });
+    console.error('Error verifying payment:', err);
+    res.status(500).json({ error: 'Failed to verify payment.' });
   }
 };
 
