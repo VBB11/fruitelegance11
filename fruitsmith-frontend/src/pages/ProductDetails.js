@@ -1,3 +1,4 @@
+// src/pages/ProductDetailPage.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams, Link, useNavigate } from "react-router-dom";
@@ -58,11 +59,17 @@ const ProductDetailPage = () => {
       setLoading(true);
       try {
         const productRes = await axios.get(`${config.backendUrl}/api/products/${id}`);
-        // Ensure images is an array, even if a single image is returned
+        // Correctly handle the 'image' array from the backend
         const fetchedProduct = productRes.data;
-        if (!fetchedProduct.images || !Array.isArray(fetchedProduct.images)) {
-          fetchedProduct.images = [fetchedProduct.image || placeholderImage];
+        fetchedProduct.image = Array.isArray(fetchedProduct.image)
+          ? fetchedProduct.image
+          : [fetchedProduct.image].filter(Boolean);
+
+        // Add a placeholder if the image array is empty
+        if (fetchedProduct.image.length === 0) {
+            fetchedProduct.image = [placeholderImage];
         }
+
         setProduct(fetchedProduct);
 
         const allProductsRes = await axios.get(`${config.backendUrl}/api/products`);
@@ -137,12 +144,14 @@ const ProductDetailPage = () => {
   // Slider settings for product images
   const sliderSettings = {
     dots: true,
-    infinite: product?.images?.length > 1,
+    infinite: product?.image?.length > 1, 
     speed: 500,
     slidesToShow: 1,
     slidesToScroll: 1,
     arrows: false,
-    autoplay: false,
+    autoplay: true, // Auto-sliding is enabled here
+    autoplaySpeed: 3000, // Slides change every 3 seconds
+    pauseOnHover: true, // Pauses on hover
   };
 
   if (loading) {
@@ -169,31 +178,39 @@ const ProductDetailPage = () => {
   const currentCategoryId = product.categoryId?._id;
 
   const renderProductLayout = () => {
+    // Both layouts now use the same logic for rendering images
+    // because product.image is guaranteed to be an array.
+    const imagesToDisplay = product.image && product.image.length > 1;
+
+    // Use a single image if there's only one, otherwise use the slider
+    const imageContent = imagesToDisplay ? (
+        <Slider {...sliderSettings}>
+            {product.image.map((img, index) => (
+                <div key={index}>
+                    <img
+                        src={img || placeholderImage}
+                        alt={`${product.name} image ${index + 1}`}
+                        className="w-full aspect-square object-contain rounded-xl hover:scale-105 transition-transform duration-300 shadow-md"
+                    />
+                </div>
+            ))}
+        </Slider>
+    ) : (
+        <img
+            src={product.image[0] || placeholderImage}
+            alt={product.name}
+            className="w-full aspect-square object-contain rounded-xl hover:scale-105 transition-transform duration-300 shadow-md"
+        />
+    );
+
+
     if (currentCategoryId === categoryIds.hampers) {
       return (
         <div className="flex flex-col gap-8">
           <div className="flex flex-col md:flex-row gap-12 items-start">
             <div className="flex-1">
               <div className="w-full max-w-md p-4 rounded-3xl shadow-lg bg-white relative">
-                {product.images && product.images.length > 1 ? (
-                  <Slider {...sliderSettings}>
-                    {product.images.map((img, index) => (
-                      <div key={index}>
-                        <img
-                          src={img || placeholderImage}
-                          alt={`${product.name} image ${index + 1}`}
-                          className="w-full aspect-square object-contain rounded-xl hover:scale-105 transition-transform duration-300 shadow-md"
-                        />
-                      </div>
-                    ))}
-                  </Slider>
-                ) : (
-                  <img
-                    src={product.image || placeholderImage}
-                    alt={product.name}
-                    className="w-full aspect-square object-contain rounded-xl hover:scale-105 transition-transform duration-300 shadow-md"
-                  />
-                )}
+                {imageContent}
                 <button
                   aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
                   onClick={() => toggleFavorite(product._id)}
@@ -255,9 +272,9 @@ const ProductDetailPage = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         <div className="flex items-center justify-center bg-gray-50 rounded-2xl p-6 relative">
-          {product.images && product.images.length > 1 ? (
+          {imagesToDisplay ? (
             <Slider {...sliderSettings} className="w-full">
-              {product.images.map((img, index) => (
+              {product.image.map((img, index) => (
                 <div key={index}>
                   <img
                     src={img || placeholderImage}
@@ -268,7 +285,7 @@ const ProductDetailPage = () => {
               ))}
             </Slider>
           ) : (
-            <img src={product.image || placeholderImage} alt={product.name} className="w-full h-auto max-h-[400px] object-contain" />
+            <img src={product.image[0] || placeholderImage} alt={product.name} className="w-full h-auto max-h-[400px] object-contain" />
           )}
           <button aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"} onClick={() => toggleFavorite(product._id)} className="absolute top-5 right-5 z-10 text-red-600 hover:text-red-700 transition-colors">
             {isFavorite ? <FaHeart size={24} /> : <FaRegHeart size={24} />}
@@ -402,7 +419,7 @@ const ProductDetailPage = () => {
                     className="flex items-center gap-4 bg-green-50 rounded-xl p-3 hover:bg-green-100 transition"
                   >
                     <img
-                      src={op.image || op.images?.[0] || placeholderImage}
+                      src={op.image?.[0] || placeholderImage}
                       alt={op.name}
                       className="w-16 h-16 object-cover rounded-lg shadow-sm"
                     />

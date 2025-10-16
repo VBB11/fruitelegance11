@@ -12,6 +12,9 @@ import config from './config/config';
 const placeholderImage =
   "https://cdn.pixabay.com/photo/2016/04/01/10/07/fruit-1303048_1280.png";
 
+const deliveryFeeThreshold = 1999;
+const deliveryFeeAmount = 119;
+
 function Cart() {
   const { cart, dispatch } = useCart();
   const { token, user, login } = useContext(AuthContext);
@@ -56,16 +59,15 @@ function Cart() {
 
         setAddresses(normalized);
 
-        if (normalized.length > 0) {
-          const storedAddress = JSON.parse(localStorage.getItem('selectedAddress'));
-          if (storedAddress && normalized.find(addr => String(addr._id) === storedAddress._id)) {
-            setSelectedAddressId(storedAddress._id);
-          } else {
-            setSelectedAddressId(normalized[0]._id);
-          }
+        const storedAddressId = localStorage.getItem('selectedAddressId');
+        if (storedAddressId && normalized.find(addr => String(addr._id) === storedAddressId)) {
+          setSelectedAddressId(storedAddressId);
+        } else if (normalized.length > 0) {
+          setSelectedAddressId(normalized[0]._id);
         } else {
           setSelectedAddressId(null);
         }
+
         setLoading(false);
       } catch (err) {
         console.error('Failed to fetch addresses', err);
@@ -78,26 +80,38 @@ function Cart() {
     fetchAddresses();
   }, [token]);
 
-  const selectedAddress = user ? 
-    addresses.find(addr => String(addr._id) === selectedAddressId) : 
-    guestForm;
+  useEffect(() => {
+    if (selectedAddressId) {
+      localStorage.setItem('selectedAddressId', selectedAddressId);
+    } else {
+      localStorage.removeItem('selectedAddressId');
+    }
+  }, [selectedAddressId]);
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * (item.qty || 1), 0);
-  const deliveryFeeThreshold = 1999;
-  const deliveryFee = subtotal >= deliveryFeeThreshold ? 0 : 119;
+  
+  const deliveryFee = cart.length === 0 ? 0 : (subtotal >= deliveryFeeThreshold ? 0 : deliveryFeeAmount);
+  
   const totalPrice = subtotal + deliveryFee;
+
+  const selectedAddress = user 
+    ? addresses.find(addr => String(addr._id) === selectedAddressId)
+    : { ...guestForm, name: guestForm.name.trim() };
 
   const handleProceed = () => {
     if (cart.length === 0) {
       alert('Your cart is empty.');
       return;
     }
-    if (!selectedAddress || !selectedAddress.street) {
-      alert('Please provide a delivery address.');
+    if (user && (!selectedAddress || !selectedAddress.street)) {
+      alert('Please select a delivery address from your saved addresses.');
       return;
     }
+    if (!user && !validateGuestForm()) {
+        alert('Please fill out all guest details.');
+        return;
+    }
 
-    localStorage.setItem('selectedAddress', JSON.stringify(selectedAddress));
     navigate('/checkout', { state: { address: selectedAddress } });
   };
 
@@ -111,19 +125,21 @@ function Cart() {
     const requiredFields = ['name', 'email', 'mobile', 'street', 'city', 'state', 'zip', 'country'];
     for (let field of requiredFields) {
       if (!guestForm[field] || guestForm[field].trim() === '') {
-        return `Please enter your ${field}.`;
+        setGuestFormError(`Please enter your ${field}.`);
+        return false;
       }
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(guestForm.email)) return 'Please enter a valid email.';
-    return null;
+    if (!emailRegex.test(guestForm.email)) {
+        setGuestFormError('Please enter a valid email.');
+        return false;
+    }
+    return true;
   };
 
   const handleGuestSubmit = async (e) => {
     e.preventDefault();
-    const errorMsg = validateGuestForm();
-    if (errorMsg) {
-      setGuestFormError(errorMsg);
+    if (!validateGuestForm()) {
       return;
     }
 
@@ -144,10 +160,12 @@ function Cart() {
         }
       });
       login({ token: res.data.token, user: res.data.user });
-      setAddresses([res.data.user.addresses[0]]);
-      setSelectedAddressId(null);
-      localStorage.setItem('selectedAddress', JSON.stringify(res.data.user.addresses[0]));
-      navigate('/checkout', { state: { address: res.data.user.addresses[0] } });
+      const newAddress = res.data.user.addresses[0];
+      setAddresses([newAddress]);
+      setSelectedAddressId(newAddress._id);
+      localStorage.setItem('selectedAddressId', newAddress._id);
+      
+      navigate('/checkout', { state: { address: newAddress } });
     } catch (err) {
       console.error(err);
       setGuestFormError(err.response?.data?.error || 'Failed to complete guest checkout.');
@@ -163,7 +181,8 @@ function Cart() {
     );
   }
 
-  const isProceedDisabled = cart.length === 0 || (!selectedAddress || !selectedAddress.street);
+  const isProceedDisabled = cart.length === 0 || (user && !selectedAddressId);
+  // Removed `isCheckoutAsGuestDisabled` as it was redundant. `handleGuestSubmit` handles form validation.
 
   return (
     <div className="relative bg-[#f9f1dd] min-h-screen select-none py-16 px-4 sm:px-8">
@@ -192,7 +211,7 @@ function Cart() {
                 {cart.map(item => (
                   <div key={item._id} className="py-4 flex items-center gap-4">
                     <img
-                      src={item.image || placeholderImage}
+                      src={item.image?.[0] || placeholderImage}
                       alt={item.name}
                       className="w-20 h-20 object-contain rounded-lg shadow-sm"
                     />
@@ -363,45 +382,55 @@ function Cart() {
                 </form>
               </div>
             )}
-
+            
             <div className="bg-white rounded-3xl shadow-md p-6">
               <h2 className="text-2xl font-bold text-green-800 mb-4">Order Summary</h2>
-              <div className={`p-4 rounded-lg flex items-center gap-2 mb-4 ${
-                subtotal >= deliveryFeeThreshold ? 'bg-green-50 text-green-800' : 'bg-yellow-50 text-yellow-800'
-              }`}>
-                {subtotal >= deliveryFeeThreshold ? (
-                  <>
-                    <FaShippingFast size={20} />
-                    <p className="font-semibold">Hooray! You've got free delivery.</p>
-                  </>
-                ) : (
-                  <>
-                    <FaExclamationCircle size={20} />
-                    <p>Shop for **₹{(deliveryFeeThreshold - subtotal).toFixed(2)}** more to grab a free delivery.</p>
-                  </>
-                )}
-              </div>
+              {cart.length > 0 && (
+                <div className={`p-4 rounded-lg flex items-center gap-2 mb-4 ${
+                  subtotal >= deliveryFeeThreshold ? 'bg-green-50 text-green-800' : 'bg-yellow-50 text-yellow-800'
+                }`}>
+                  {subtotal >= deliveryFeeThreshold ? (
+                    <>
+                      <FaShippingFast size={20} />
+                      <p className="font-semibold">Hooray! You've got free delivery.</p>
+                    </>
+                  ) : (
+                    <>
+                      <FaExclamationCircle size={20} />
+                      <p>Shop for <span className="font-semibold">₹{(deliveryFeeThreshold - subtotal).toFixed(2)}</span> more to grab a free delivery.</p>
+                    </>
+                  )}
+                </div>
+              )}
               <div className="space-y-2 text-gray-700 mb-4">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
                   <span className="font-semibold">₹{subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Delivery Fee:</span>
-                  <span className="font-semibold">{deliveryFee === 0 ? 'Free' : `₹${deliveryFee.toFixed(2)}`}</span>
-                </div>
+                {cart.length > 0 && (
+                    <div className="flex justify-between">
+                        <span>Delivery Fee:</span>
+                        <span className="font-semibold">{deliveryFee === 0 ? 'Free' : `₹${deliveryFee.toFixed(2)}`}</span>
+                    </div>
+                )}
               </div>
               <div className="border-t border-gray-200 pt-4 mt-4 flex justify-between items-center">
                 <span className="text-2xl font-bold text-green-800">Total:</span>
                 <span className="text-2xl font-bold text-green-800">₹{totalPrice.toFixed(2)}</span>
               </div>
-              <button
-                onClick={handleProceed}
-                className="w-full mt-6 bg-green-800 hover:bg-green-900 text-white px-6 py-3 rounded-full font-semibold text-lg transition-colors"
-                disabled={isProceedDisabled}
-              >
-                Proceed to Checkout
-              </button>
+              {user ? (
+                <button
+                  onClick={handleProceed}
+                  className={`w-full mt-6 bg-green-800 text-white px-6 py-3 rounded-full font-semibold text-lg transition-colors ${
+                    isProceedDisabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-green-900'
+                  }`}
+                  disabled={isProceedDisabled}
+                >
+                  Proceed to Checkout
+                </button>
+              ) : (
+                <p className="mt-4 text-center text-gray-500 text-sm">Fill the form to proceed to checkout.</p>
+              )}
             </div>
           </div>
         </div>
