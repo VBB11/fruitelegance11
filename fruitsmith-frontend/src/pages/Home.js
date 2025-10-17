@@ -763,6 +763,9 @@ export default function Home() {
                 © 2025 Fruit Elegance. All Rights Reserved. |
                 <Link to="/privacy" className="hover:text-yellow-300 ml-1">Privacy Policy</Link> |
                 <Link to="/terms" className="hover:text-yellow-300 ml-1">Terms of Service</Link>
+                <span className="block lg:inline-block mt-2 lg:mt-0 lg:ml-4">
+                  made by <a href="https://www.1scratech.com/" target="_blank" rel="noopener noreferrer" className="hover:text-yellow-300">https://www.1scratech.com/</a>
+                </span>
               </div>
               <div className="flex items-center justify-center gap-4 text-center lg:text-right">
                 <span>🔒 Secure Shopping</span>
