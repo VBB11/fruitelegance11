@@ -758,11 +758,23 @@ export default function Home() {
           </div>
 
           <div className="bg-green-950 pt-4 mt-4">
-            <div className="flex flex-col lg:flex-row justify-between items-center gap-4 text-green-200 text-xs sm:text-sm max-w-7xl mx-auto py-4 text-center">
-              <div>
-                © 2025 Fruit Elegance. All Rights Reserved. |
-                <Link to="/privacy" className="hover:text-yellow-300 ml-1">Privacy Policy</Link> |
-                <Link to="/terms" className="hover:text-yellow-300 ml-1">Terms of Service</Link>
+            <div className="flex flex-col lg:flex-row justify-between items-center gap-4 text-green-200 text-xs sm:text-sm max-w-7xl mx-auto py-4 px-4 text-center">
+              <div className="flex flex-col sm:flex-row items-center gap-1">
+                <span>© 2025 Fruit Elegance. All Rights Reserved. |</span>
+                <Link to="/privacy" className="hover:text-yellow-300 ml-1">Privacy Policy</Link>
+                <span className="hidden sm:inline">|</span>
+                <Link to="/terms" className="hover:text-yellow-300 sm:ml-1">Terms of Service</Link>
+                {/* HIGHLIGHTED ATTRIBUTION START */}
+                <span className="hidden sm:inline">|</span>
+                <a 
+                  href="https://www.1scratech.com/" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="hover:text-yellow-300 text-yellow-400 font-extrabold text-sm sm:text-base sm:ml-2 mt-1 sm:mt-0 transition-colors"
+                >
+                  Made by 1scratech
+                </a>
+                {/* HIGHLIGHTED ATTRIBUTION END */}
               </div>
               <div className="flex items-center justify-center gap-4 text-center lg:text-right">
                 <span>🔒 Secure Shopping</span>
