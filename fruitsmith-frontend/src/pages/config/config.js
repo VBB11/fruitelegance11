@@ -1,5 +1,5 @@
 const config = {
-    backendUrl: "http://localhost:4000",
+    backendUrl: "/api",
     withCredentials: true
 }
 
