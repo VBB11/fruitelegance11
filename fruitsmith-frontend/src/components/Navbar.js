@@ -18,19 +18,20 @@ function Navbar() {
     navigate('/');
   };
 
-  const commonLinkClasses = "px-3 py-2 border-b-2 transition-colors";
-  const activeLinkClasses = "border-green-600 text-green-700 font-bold";
-  const inactiveLinkClasses = "border-transparent text-gray-700 hover:border-green-300 hover:text-green-800";
+  const commonLinkClasses = "px-3 py-2 border-b-4 transition-all duration-300 font-semibold text-lg";
+  // Festive colors: Red for active, Dark Green/White/Gold for inactive
+  const activeLinkClasses = "border-red-600 text-red-700 font-extrabold";
+  const inactiveLinkClasses = "border-transparent text-green-800 hover:border-green-600 hover:text-green-900";
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-white/95 shadow-lg border-b border-green-100 flex items-center px-4 sm:px-8 py-3 z-50 backdrop-blur-sm min-h-[80px]">
+    <nav className="fixed top-0 left-0 w-full bg-white/95 shadow-2xl border-b-4 border-red-600/30 flex items-center px-4 sm:px-8 py-2 z-50 backdrop-blur-sm min-h-[90px]">
       {/* Left: Navigation Links for Desktop */}
       <div className="hidden md:flex gap-8 items-center flex-1">
         <Link
           to="/"
-          className="text-2xl font-extrabold text-green-700 hover:text-green-900 transition"
+          className="text-3xl font-extrabold text-green-800 hover:text-red-700 transition"
         >
-          Fruit Elegance
+          Fruit <span className="text-red-600">Elegance 🎄</span>
         </Link>
         <Link
           to="/"
@@ -42,27 +43,17 @@ function Navbar() {
           to="/about"
           className={`${commonLinkClasses} ${location.pathname === '/about' ? activeLinkClasses : inactiveLinkClasses}`}
         >
-          About
+          About Us
         </Link>
       </div>
 
-      {/* Center: Logo for Mobile */}
-      <div className="flex-1 flex justify-start md:hidden">
-        <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="text-green-700 p-2 text-xl"
-          aria-label="Toggle navigation menu"
-        >
-          {isMobileMenuOpen ? <FaTimes /> : <FaBars />}
-        </button>
-      </div>
-
+      {/* Center: Logo for Mobile/Desktop */}
       <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center">
         <Link to="/">
           <img
             src="/images/felogo1.png"
             alt="Fruit Elegance Logo"
-            className="w-20 h-20 object-contain drop-shadow-sm min-w-[72px] min-h-[72px]"
+            className="w-24 h-24 object-contain drop-shadow-md min-w-[72px] min-h-[72px] transform transition-transform duration-300 hover:scale-105"
             draggable={false}
           />
         </Link>
@@ -70,15 +61,15 @@ function Navbar() {
 
 
       {/* Right: Cart/Profile/Authentication for Desktop and Mobile */}
-      <div className="flex items-center gap-4 sm:gap-6 flex-1 justify-end">
+      <div className="flex items-center gap-4 sm:gap-8 flex-1 justify-end">
         <Link
           to="/cart"
           aria-label="Cart"
-          className="relative text-green-700 hover:text-green-900 transition"
+          className="relative text-red-600 hover:text-red-800 transition p-2 rounded-full hover:bg-red-50"
         >
-          <FaShoppingCart size={24} />
+          <FaShoppingCart size={28} />
           {cartQty > 0 && (
-            <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full px-2 text-xs font-bold">
+            <span className="absolute -top-1 -right-1 bg-green-700 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
               {cartQty}
             </span>
           )}
@@ -87,14 +78,14 @@ function Navbar() {
           <>
             <Link
               to="/profile"
-              className="text-green-700 font-semibold hover:underline hover:text-green-900 transition flex items-center gap-2"
+              className="text-green-800 font-bold hover:text-red-600 transition flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50"
             >
-              <FaUser size={18} />
+              <FaUser size={20} />
               <span className="hidden md:inline">Profile</span>
             </Link>
             <button
               onClick={handleLogout}
-              className="text-red-600 hover:text-red-800 font-semibold transition"
+              className="text-red-600 hover:text-red-800 font-bold transition p-2 rounded-lg border-2 border-red-600 hover:bg-red-600 hover:text-white"
             >
               Logout
             </button>
@@ -103,51 +94,60 @@ function Navbar() {
           <>
             <Link
               to="/login"
-              className="text-green-700 font-semibold hover:underline hover:text-green-900 transition flex items-center gap-2"
+              className="text-green-800 font-bold hover:text-red-600 transition flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50"
             >
-                <FaSignInAlt size={18} />
+                <FaSignInAlt size={20} />
                 <span className="hidden md:inline">Login</span>
             </Link>
             <Link
               to="/signup"
-              className="text-green-700 font-semibold hover:underline hover:text-green-900 transition flex items-center gap-2"
+              className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-700 transition shadow-md hidden md:flex items-center gap-2"
             >
-                <FaUserPlus size={18} />
-                <span className="hidden md:inline">Signup</span>
+                <FaUserPlus size={20} />
+                Signup
             </Link>
           </>
         )}
+
+        {/* Mobile menu button on the far right */}
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="text-green-700 p-2 text-2xl md:hidden"
+          aria-label="Toggle navigation menu"
+        >
+          {isMobileMenuOpen ? <FaTimes /> : <FaBars />}
+        </button>
       </div>
 
-      {/* Mobile Menu - Shown only when isMobileMenuOpen is true */}
+      {/* Mobile Menu - Styling modernized and festive colors */}
       {isMobileMenuOpen && (
-        <div className="absolute top-[80px] left-0 w-full min-h-[calc(100vh-80px)] bg-white p-8 flex flex-col items-center shadow-lg md:hidden">
+        <div className="absolute top-[90px] left-0 w-full min-h-[calc(100vh-90px)] bg-white/95 backdrop-blur-md p-8 flex flex-col items-center shadow-2xl md:hidden transition-all duration-300 transform origin-top border-t-4 border-red-600">
           <Link
             to="/"
             onClick={() => setIsMobileMenuOpen(false)}
-            className="w-full text-center py-4 text-2xl font-bold border-b border-gray-200"
+            className="w-full text-center py-5 text-2xl font-extrabold text-green-800 hover:bg-red-50 border-b border-gray-200 transition-colors"
           >
             Home
           </Link>
           <Link
             to="/about"
             onClick={() => setIsMobileMenuOpen(false)}
-            className="w-full text-center py-4 text-2xl font-bold border-b border-gray-200"
+            className="w-full text-center py-5 text-2xl font-extrabold text-green-800 hover:bg-red-50 border-b border-gray-200 transition-colors"
           >
-            About
+            About Us
           </Link>
           {token ? (
             <>
               <Link
                 to="/profile"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="w-full text-center py-4 text-2xl font-bold border-b border-gray-200"
+                className="w-full text-center py-5 text-2xl font-extrabold text-green-800 hover:bg-red-50 border-b border-gray-200 transition-colors"
               >
                 Profile
               </Link>
               <button
                 onClick={handleLogout}
-                className="w-full text-center py-4 text-2xl font-bold text-red-600"
+                className="w-full text-center py-5 text-2xl font-extrabold text-red-600 hover:bg-red-50 transition-colors"
               >
                 Logout
               </button>
@@ -157,14 +157,14 @@ function Navbar() {
               <Link
                 to="/login"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="w-full text-center py-4 text-2xl font-bold border-b border-gray-200"
+                className="w-full text-center py-5 text-2xl font-extrabold text-green-800 hover:bg-red-50 border-b border-gray-200 transition-colors"
               >
                 Login
               </Link>
               <Link
                 to="/signup"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="w-full text-center py-4 text-2xl font-bold"
+                className="w-full text-center py-5 text-2xl font-extrabold text-red-600 hover:bg-red-50 transition-colors"
               >
                 Signup
               </Link>
