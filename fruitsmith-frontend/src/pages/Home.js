@@ -8,11 +8,11 @@ import {
   FaRegHeart,
   FaEye,
   FaTimes,
-  FaGift, // Changed from FaSeedling (seasonal change)
+  FaGift,
   FaHandshake,
   FaMoneyCheckAlt,
   FaLock,
-  FaStar, // Added for a festive touch
+  FaStar,
 } from "react-icons/fa";
 import { useCart } from "../context/CartContext";
 import "slick-carousel/slick/slick.css";
@@ -30,41 +30,41 @@ const FALLBACK_BANNERS = [
     img: "https://deq64r0ss2hgl.cloudfront.net/images/product/dry-fruits-gift-boxes-hampers-14465093981690.png",
     title: "Holiday Hampers & Gift Boxes",
     label: "Shop Festive Gifts",
-    link: "/category/gifts", // Updated category name
+    link: "/category/gifts",
   },
   {
     id: 2,
     img: "https://www.fruitsmith.com/pub/media/wysiwyg/wcg-25-11.jpg",
     title: "New Year's Freshness, New You",
     label: "Start Fresh",
-    link: "/category/fresh", // Updated category name
+    link: "/category/fresh",
   },
   {
     id: 3,
     img: "https://www.fruitsmith.com/pub/media/wysiwyg/dw-25-2.jpg",
     title: "Winter Special Fruit Combos",
     label: "View Specials",
-    link: "/category/winter-specials", // Updated category name
+    link: "/category/winter-specials",
   },
 ];
 
 const whyChooseUsFeatures = [
   {
-    icon: FaGift, // Changed icon
+    icon: FaGift,
     text: "Seasonal Specials",
-    color: "text-red-600", // Festive Red
+    color: "text-red-600",
     desc: "Discover our limited-time Christmas and New Year's collections.",
   },
   {
     icon: FaHandshake,
     text: "Ethical Sourcing",
-    color: "text-amber-500", // Gold/Amber
+    color: "text-amber-500",
     desc: "We partner with local farms to ensure fair trade practices.",
   },
   {
     icon: FaMoneyCheckAlt,
     text: "Best Price",
-    color: "text-green-700", // Forest Green
+    color: "text-green-700",
     desc: "Premium quality fruits at the most competitive prices.",
   },
   {
@@ -75,9 +75,15 @@ const whyChooseUsFeatures = [
   },
 ];
 
-// Quick view modal for products - Styling modernized
+// Quick view modal for products - Image src fixed
 const QuickViewModal = ({ product, onClose, handleAdd }) => {
   if (!product) return null;
+
+  // Use the first image in the array, or the product.image itself (if it's a string), or the placeholder.
+  const imageUrl = Array.isArray(product.image)
+    ? product.image[0]
+    : product.image || placeholderImage;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-70 backdrop-blur-sm">
       <div className="bg-white rounded-3xl p-6 sm:p-10 max-w-xl w-full mx-4 shadow-2xl relative border-4 border-red-100">
@@ -91,7 +97,7 @@ const QuickViewModal = ({ product, onClose, handleAdd }) => {
         <div className="flex flex-col md:flex-row gap-8">
           <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-2xl p-4">
             <img
-              src={product.image || placeholderImage}
+              src={imageUrl}
               alt={product.name}
               className="w-full h-auto max-h-72 object-contain transition-transform duration-300 hover:scale-105"
             />
@@ -125,7 +131,7 @@ const QuickViewModal = ({ product, onClose, handleAdd }) => {
   );
 };
 
-// Product card - Styling modernized and festive
+// Product card - Image src fixed and Quick View logic fixed for click-through
 const ProductCard = ({
   product,
   getQuantity,
@@ -141,6 +147,11 @@ const ProductCard = ({
   const isNew = product.isNew || false;
   const isBestSeller = product.isBestSeller || false;
 
+  // Use the first image in the array, or the product.image itself, or the placeholder.
+  const imageUrl = Array.isArray(product.image)
+    ? product.image[0]
+    : product.image || placeholderImage;
+
   return (
     <article
       className="bg-white rounded-2xl shadow-xl border border-gray-100 cursor-default select-none relative flex flex-col transition-all duration-300 transform hover:scale-[1.03] hover:shadow-2xl overflow-hidden"
@@ -150,36 +161,36 @@ const ProductCard = ({
       <button
         aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
         onClick={() => toggleFavorite(product._id)}
-        className="absolute top-3 right-3 z-20 text-red-600 hover:text-red-700 transition-colors p-1 bg-white rounded-full shadow-md"
+        className="absolute top-3 right-3 z-30 text-red-600 hover:text-red-700 transition-colors p-1 bg-white rounded-full shadow-md"
       >
         {isFavorite ? <FaHeart size={20} /> : <FaRegHeart size={20} />}
       </button>
 
-      {isNew && (
-        <span className="absolute top-3 left-3 z-20 bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
-          NEW
-        </span>
-      )}
-      {isBestSeller && (
-        <span className="absolute top-3 left-3 z-20 bg-amber-400 text-gray-900 text-xs font-bold px-3 py-1 rounded-full shadow-md">
-          <FaStar className="inline mr-1 -mt-0.5" size={10} /> BEST SELLER
-        </span>
-      )}
-
-      {/* Quick View Button for hover */}
-      <div className={`absolute inset-0 z-10 flex items-center justify-center transition-opacity duration-300 ${isHovering ? 'opacity-100' : 'opacity-0 pointer-events-none'} hidden md:flex`}>
-          <button
-            onClick={() => onQuickView(product)}
-            className="bg-white text-green-800 px-5 py-2 rounded-full font-bold shadow-xl hover:bg-gray-100 transition-transform duration-300 transform hover:scale-105"
-          >
-            <FaEye className="inline-block mr-2" /> Quick View
-          </button>
+      {/* Combined Badges logic simplified */}
+      <div className="absolute top-3 left-3 z-30 flex flex-col gap-1">
+        {isNew && !isBestSeller && (
+          <span className="bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
+            NEW
+          </span>
+        )}
+        {isBestSeller && (
+          <span className="bg-amber-400 text-gray-900 text-xs font-bold px-3 py-1 rounded-full shadow-md">
+            <FaStar className="inline mr-1 -mt-0.5" size={10} /> BEST SELLER
+          </span>
+        )}
       </div>
 
-      <Link to={`/product/${product._id}`} className="block p-4 pt-6 flex-grow">
+      {/* This is the primary fix area: The Link now covers the image and name directly,
+        ensuring they are clickable, regardless of hover state.
+        We've increased the z-index of the content link slightly to ensure it's on top of any passive hover effects. 
+      */}
+      <Link 
+        to={`/product/${product._id}`} 
+        className="block p-4 pt-6 flex-grow relative z-20" // <-- Ensure this Link is the primary clickable area
+      >
         <div className="bg-gray-50 rounded-xl p-2 mb-4">
           <img
-            src={product.image || placeholderImage}
+            src={imageUrl}
             alt={product.name}
             className="w-full h-40 sm:h-56 object-contain rounded-xl transition-transform duration-300 hover:scale-[1.05]"
             loading="lazy"
@@ -196,33 +207,44 @@ const ProductCard = ({
         </p>
       </Link>
 
-      {/* Cart Controls - Red for Add/Remove */}
-      {qty === 0 ? (
+      {/* Cart Controls and Quick View Button - The Quick View button is moved out of the hover overlay to fix the issue. */}
+      <div className="px-4 pb-4 pt-2">
+        {/* Quick View Button - Now visible next to cart controls, or can be placed in the footer area if preferred */}
         <button
-          onClick={() => handleAdd(product)}
-          className="bg-red-600 text-white rounded-b-2xl py-3 font-bold text-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 transition-colors"
+            onClick={() => onQuickView(product)}
+            className={`w-full bg-green-100 text-green-800 px-3 py-2 rounded-xl font-bold text-sm shadow-inner hover:bg-green-200 transition-colors mb-2`}
+            aria-label={`Quick view of ${product.name}`}
         >
-          Add to Cart
+            <FaEye className="inline-block mr-2" /> Quick View
         </button>
-      ) : (
-        <div className="bg-red-600 text-white rounded-b-2xl py-3 flex items-center justify-center gap-4">
-          <button
-            onClick={() => handleRemove(product._id)}
-            className="bg-red-700 p-2 rounded-full hover:bg-red-800 transition-colors text-xl font-bold"
-            aria-label="Remove one item"
-          >
-            −
-          </button>
-          <span className="font-extrabold text-2xl">{qty}</span>
+
+        {qty === 0 ? (
           <button
             onClick={() => handleAdd(product)}
-            className="bg-red-700 p-2 rounded-full hover:bg-red-800 transition-colors text-xl font-bold"
-            aria-label="Add one item"
+            className="w-full bg-red-600 text-white rounded-xl py-3 font-bold text-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 transition-colors"
           >
-            +
+            Add to Cart
           </button>
-        </div>
-      )}
+        ) : (
+          <div className="w-full bg-red-600 text-white rounded-xl py-3 flex items-center justify-center gap-4">
+            <button
+              onClick={() => handleRemove(product._id)}
+              className="bg-red-700 p-2 rounded-full hover:bg-red-800 transition-colors text-xl font-bold"
+              aria-label="Remove one item"
+            >
+              −
+            </button>
+            <span className="font-extrabold text-2xl">{qty}</span>
+            <button
+              onClick={() => handleAdd(product)}
+              className="bg-red-700 p-2 rounded-full hover:bg-red-800 transition-colors text-xl font-bold"
+              aria-label="Add one item"
+            >
+              +
+            </button>
+          </div>
+        )}
+      </div>
     </article>
   );
 };
@@ -282,7 +304,7 @@ export default function Home() {
 
   const { cart, dispatch } = useCart();
 
-  // Load products
+  // Load products - Corrected to normalize the 'image' field for consistency
   useEffect(() => {
     let ignore = false;
     axios
@@ -294,6 +316,8 @@ export default function Home() {
             ...p,
             isNew: index < 3,
             isBestSeller: index % 5 === 0,
+            // Add normalization back for safety/consistency
+            image: Array.isArray(p.image) ? p.image : [p.image].filter(Boolean),
           }));
           setProducts(productsWithBadges);
           setDisplayedProducts(productsWithBadges);
