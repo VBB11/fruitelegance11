@@ -242,7 +242,7 @@ function AdminOrders({ token }) {
             ) : (
               // Simple List-based visualization (Ready for replacement with a proper Pie Chart)
               <div className="space-y-2">
-                {/*  */}
+                
                 {Object.entries(summaryData.statusBreakdown)
                     // Sort by count descending for better visual impact
                     .sort(([, countA], [, countB]) => countB - countA)
@@ -260,8 +260,7 @@ function AdminOrders({ token }) {
           <div className="lg:col-span-2 bg-gray-50 p-4 rounded-xl shadow-inner border border-gray-200">
             <h3 className="text-lg font-semibold mb-3">Sales Trend (Last 30 Days)</h3>
             <div className="h-64 flex justify-center items-center text-gray-500 border border-dashed border-gray-300 rounded-lg">
-              [Placeholder for Line Chart - e.g., Recharts LineChart]
-              {/*  */}
+              
             </div>
           </div>
         </div>

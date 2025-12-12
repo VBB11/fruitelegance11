@@ -2,66 +2,118 @@
 const Order = require('../models/Order');
 
 // =================================================================
-// 1. GET ALL ORDERS (Existing Function - Minor enhancement for search/date)
+// 1. GET ALL ORDERS (FIXED/ROBUST SEARCH IMPLEMENTATION)
 // =================================================================
-
 exports.getAllOrders = async (req, res) => {
   try {
-    const filter = {};
     const { status, page, limit, search, startDate, endDate } = req.query;
 
-    if (status) {
-      filter.status = status;
-    }
-
-    // Add search functionality (matches by user name or email)
-    if (search) {
-        // NOTE: This requires indexing on the Order model for user fields, or
-        // you need a more complex $lookup/$match pipeline here.
-        // For simplicity, we'll keep the basic text search logic for now, 
-        // assuming search is used for Order ID on the client side.
-    }
-    
-    // Add date filtering
-    if (startDate || endDate) {
-        filter.orderDate = {};
-        if (startDate) {
-            filter.orderDate.$gte = new Date(startDate);
-        }
-        if (endDate) {
-            // Include orders up to the end of the selected day
-            const endDay = new Date(endDate);
-            endDay.setDate(endDay.getDate() + 1);
-            filter.orderDate.$lt = endDay;
-        }
-    }
-
-
-    // Pagination
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 20;
     const skip = (pageNum - 1) * limitNum;
+    
+    // --- Initial Match Stage (for status and date filters) ---
+    let matchStage = {};
+    
+    if (status) {
+      matchStage.status = status;
+    }
+    
+    if (startDate || endDate) {
+        matchStage.orderDate = {};
+        if (startDate) {
+            matchStage.orderDate.$gte = new Date(startDate);
+        }
+        if (endDate) {
+            const endDay = new Date(endDate);
+            endDay.setDate(endDay.getDate() + 1);
+            matchStage.orderDate.$lt = endDay;
+        }
+    }
 
-    const orders = await Order.find(filter)
-      .sort({ orderDate: -1 })
-      .skip(skip)
-      .limit(limitNum)
-      .populate('userId', 'name email'); // populate user's basic info
+    // --- Aggregation Pipeline for Search, Filtering, and Pagination ---
+    let pipeline = [];
+    
+    // 1. $MATCH: Apply status and date filters first
+    if (Object.keys(matchStage).length > 0) {
+        pipeline.push({ $match: matchStage });
+    }
+    
+    // 2. $LOOKUP: Attach user data (essential for searching by name/email)
+    pipeline.push({
+        $lookup: {
+            from: 'users', // **CRITICAL: Ensure this matches your Users collection name**
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'userId' // Overwrite the userId field with the full user object
+        }
+    });
 
-    const totalCount = await Order.countDocuments(filter);
+    // 3. $UNWIND: Flatten the user array (since we only expect one match)
+    pipeline.push({
+        $unwind: { path: '$userId', preserveNullAndEmptyArrays: true }
+    });
 
-    res.json({ orders, totalCount, page: pageNum, pages: Math.ceil(totalCount / limitNum) });
+    // 4. $MATCH (Search): Apply the text search across multiple fields
+    if (search && search.trim()) {
+        const searchRegex = new RegExp(search.trim(), 'i'); // Case-insensitive search
+        
+        pipeline.push({
+            $match: {
+                $or: [
+                    // Search by Order ID (using string conversion for compatibility)
+                    { _id: { $eq: search.length === 24 ? new Order(search) : null } },
+                    
+                    // Search by partial Order ID (string-based)
+                    { _id: { $regex: searchRegex } }, 
+
+                    // Search by User Name
+                    { 'userId.name': { $regex: searchRegex } }, 
+
+                    // Search by User Email
+                    { 'userId.email': { $regex: searchRegex } }
+                ]
+            }
+        });
+    }
+
+    // --- COUNT TOTAL DOCUMENTS (FOR PAGINATION) ---
+    const totalCountPipeline = [...pipeline]; // Copy the current filtering stages
+    totalCountPipeline.push({ $count: 'total' });
+    
+    const totalCountResult = await Order.aggregate(totalCountPipeline);
+    const totalCount = totalCountResult.length > 0 ? totalCountResult[0].total : 0;
+
+
+    // 5. $SORT, $SKIP, $LIMIT (Pagination)
+    pipeline.push(
+        { $sort: { orderDate: -1 } },
+        { $skip: skip },
+        { $limit: limitNum }
+    );
+    
+    // 6. Execute the main pipeline
+    const orders = await Order.aggregate(pipeline);
+
+
+    res.json({ 
+        orders, 
+        totalCount, 
+        page: pageNum, 
+        pages: Math.ceil(totalCount / limitNum) 
+    });
   } catch (err) {
     console.error('Admin get orders error:', err);
     res.status(500).json({ error: 'Failed to fetch orders.' });
   }
 };
-
 // =================================================================
 // 2. GET ORDER BY ID (Existing Function)
 // =================================================================
 exports.getOrderById = async (req, res) => {
   try {
+    // Note: If you switch getAllOrders to aggregation, you might also update getOrderById 
+    // to use aggregation if the frontend needs deeply populated data for consistency.
     const order = await Order.findById(req.params.id).populate('userId', 'name email');
     if (!order) {
       return res.status(404).json({ error: 'Order not found.' });
@@ -122,51 +174,6 @@ exports.getOrdersSummary = async (req, res) => {
       }
     }
 
-    // 3. Define the aggregation pipeline
-    const pipeline = [
-      // Filter by date first
-      { $match: matchStage }, 
-
-      // Group all matching orders into a single document to calculate totals
-      {
-        $group: {
-          _id: null, 
-          totalRevenue: { $sum: '$totalAmount' },
-          totalOrders: { $sum: 1 }, 
-          // Count status occurrences for breakdown
-          statusCounts: { $push: '$status' } 
-        }
-      },
-      
-      // Secondary grouping pipeline to calculate AOV and format status breakdown
-      // We use a final $project stage for calculation and formatting
-      {
-        $project: {
-          _id: 0, 
-          totalRevenue: 1,
-          totalOrders: 1,
-          avgOrderValue: { $divide: ['$totalRevenue', '$totalOrders'] }, // Calculate AOV
-          
-          // Re-process statusCounts array to create the statusBreakdown object
-          statusBreakdown: {
-            $arrayToObject: {
-              $map: {
-                input: '$statusCounts',
-                as: 'status',
-                in: { 
-                  k: '$$status', 
-                  v: { $sum: 1 } // Sum is not available here, need a different approach for counts
-                }
-              }
-            }
-          }
-        }
-      }
-    ];
-
-    // NOTE: The status breakdown logic using $arrayToObject on the primary group's $push
-    // is complex. A more robust way is to group by status first, then group the totals.
-    
     // REVISED (Simpler and more reliable) Pipeline for status breakdown:
     const statusPipeline = [
       { $match: matchStage },
