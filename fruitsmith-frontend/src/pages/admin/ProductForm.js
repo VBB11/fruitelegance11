@@ -1,10 +1,15 @@
-// src/pages/admin/ProductForm.js
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useCallback } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
-import { FaPlus, FaSpinner, FaTimesCircle, FaCheckCircle, FaTrash } from "react-icons/fa";
+import { FaPlus, FaSpinner, FaTimesCircle, FaTrash, FaCloudUploadAlt } from "react-icons/fa";
+import { useDropzone } from "react-dropzone";
 import config from "../config/config";
+
+// Your Cloudinary Info
+const CLOUDINARY_UPLOAD_PRESET = "product_images"; 
+const CLOUDINARY_CLOUD_NAME = "dfmokbykd";
+const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
 function ProductForm() {
   const { id } = useParams();
@@ -16,67 +21,79 @@ function ProductForm() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    mainImage: "",      // Main product image URL
-    extraImages: [],    // Array of additional image URLs
+    images: [], // This will hold the Cloudinary URLs
     price: "",
     categoryId: "",
   });
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
-  const sortCats = (arr) =>
-    [...arr].sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
+  // --- 1. Cloudinary Upload Logic ---
+  const onDrop = useCallback(async (acceptedFiles) => {
+    setUploading(true);
+    setError("");
+    const uploadedUrls = [];
 
+    for (const file of acceptedFiles) {
+      const data = new FormData();
+      data.append("file", file);
+      data.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+      try {
+        const res = await axios.post(CLOUDINARY_URL, data);
+        uploadedUrls.push(res.data.secure_url);
+      } catch (err) {
+        console.error("Cloudinary Error:", err);
+        setError("Failed to upload some images. Check file size/type.");
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      images: [...prev.images, ...uploadedUrls],
+    }));
+    setUploading(false);
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { "image/*": [] },
+    multiple: true,
+  });
+
+  const removeImage = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+  };
+
+  // --- 2. Fetch Initial Data ---
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      setError("");
       try {
         const categoriesRes = await axios.get(`${config.backendUrl}/api/admin/categories`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const rawCats = Array.isArray(categoriesRes.data)
-          ? categoriesRes.data
-          : categoriesRes.data.categories || [];
-        const cats = sortCats(rawCats);
-        setCategories(cats);
+        setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : categoriesRes.data.categories || []);
 
         if (id) {
           const productRes = await axios.get(`${config.backendUrl}/api/products/${id}`);
           const p = productRes.data;
-
-          let normalizedCategoryId = "";
-          if (p?.categoryId) {
-            if (typeof p.categoryId === "string") {
-              normalizedCategoryId = p.categoryId;
-            } else if (typeof p.categoryId === "object") {
-              normalizedCategoryId = p.categoryId._id || "";
-            }
-          } else if (p?.category?._id) {
-            normalizedCategoryId = p.category._id;
-          }
-
-          let productMainImage = p.images?.[0] || p.image?.[0] || "";
-          let productExtraImages = [];
-          if (p.images && p.images.length > 1) {
-            productExtraImages = p.images.slice(1);
-          } else if (p.image && p.image.length > 1) {
-            productExtraImages = p.image.slice(1);
-          }
-
           setFormData({
             name: p.name || "",
             description: p.description || "",
-            mainImage: productMainImage,
-            extraImages: productExtraImages,
+            images: p.image || [], // Use the 'image' field from your Mongoose schema
             price: p.price != null ? String(p.price) : "",
-            categoryId: normalizedCategoryId,
+            categoryId: p.categoryId?._id || p.categoryId || "",
           });
         }
       } catch (err) {
-        console.error("Failed to load product and categories data:", err);
-        setError("Failed to load product and categories data.");
+        setError("Failed to load product data.");
       } finally {
         setLoading(false);
       }
@@ -84,72 +101,22 @@ function ProductForm() {
     if (token) fetchData();
   }, [id, token]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleExtraImageChange = (index, value) => {
-    const newImages = [...formData.extraImages];
-    newImages[index] = value;
-    setFormData({ ...formData, extraImages: newImages });
-  };
-
-  const addExtraImageInput = () => {
-    setFormData({ ...formData, extraImages: [...formData.extraImages, ""] });
-  };
-
-  const removeExtraImageInput = (index) => {
-    const newImages = formData.extraImages.filter((_, i) => i !== index);
-    setFormData({ ...formData, extraImages: newImages });
-  };
-
-  const addCategory = async () => {
-    const name = newCategoryName.trim();
-    if (!name) return;
-    try {
-      const res = await axios.post(
-        `${config.backendUrl}/api/admin/categories`,
-        { name },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const newCat = res.data;
-      const nextCats = sortCats([...categories, newCat]);
-      setCategories(nextCats);
-      setFormData((prev) => ({ ...prev, categoryId: newCat._id }));
-      setNewCategoryName("");
-      setError("");
-    } catch (err) {
-      console.error("Failed to add category:", err);
-      setError("Failed to add category. Make sure you are logged in as admin.");
-    }
-  };
-
+  // --- 3. Save to Your Backend ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-
-    if (!formData.name.trim() || !formData.price || !formData.categoryId) {
-      setError("Product Name, Price, and Category are required.");
-      return;
-    }
-
-    if (!formData.mainImage.trim()) {
-      setError("A main product image is required.");
+    if (formData.images.length === 0) {
+      setError("Please upload at least one image.");
       return;
     }
 
     setSaving(true);
     try {
-      const filteredExtraImages = formData.extraImages.filter(url => url.trim() !== "");
-      const allImages = [formData.mainImage.trim(), ...filteredExtraImages];
-
       const payload = {
         name: formData.name.trim(),
-        description: formData.description || "",
-        image: allImages, // Changed from 'images' to 'image' to match the Mongoose schema
+        description: formData.description,
+        image: formData.images, // Sending the array of URLs to your Mongoose 'image' field
         price: Number(formData.price),
-        categoryId: String(formData.categoryId),
+        categoryId: formData.categoryId,
       };
 
       if (id) {
@@ -163,197 +130,70 @@ function ProductForm() {
       }
       navigate("/admin/products");
     } catch (err) {
-      console.error("Failed to save product:", err);
-      setError("Failed to save product. Please check your inputs and try again.");
+      setError("Failed to save product to database.");
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading)
-    return (
-      <div className="flex items-center justify-center h-screen text-gray-500">
-        <FaSpinner className="animate-spin mr-3 text-3xl" /> Loading product data...
-      </div>
-    );
+  if (loading) return <div className="p-20 text-center"><FaSpinner className="animate-spin inline text-3xl"/></div>;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 md:p-10">
-      <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6 border-b pb-4">
-          {id ? "Edit" : "Add"} Product
-        </h1>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-8">
+        <h1 className="text-2xl font-bold mb-6">{id ? "Edit" : "New"} Product</h1>
 
-        {error && (
-          <div
-            className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-center space-x-2"
-            role="alert"
-          >
-            <FaTimesCircle />
-            <span>{error}</span>
-          </div>
-        )}
+        {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 flex items-center gap-2"><FaTimesCircle/>{error}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Product Name</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
-                placeholder="e.g., Organic Apple"
-                required
-              />
+          <div>
+            <label className="block font-medium mb-1">Name</label>
+            <input type="text" className="w-full p-2 border rounded" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required />
+          </div>
+
+          <div>
+            <label className="block font-medium mb-1">Description</label>
+            <textarea className="w-full p-2 border rounded" rows="3" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
+          </div>
+
+          {/* --- Drag & Drop Zone --- */}
+          <div>
+            <label className="block font-medium mb-2">Product Images</label>
+            <div {...getRootProps()} className={`border-2 border-dashed p-6 rounded-lg text-center cursor-pointer transition ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}>
+              <input {...getInputProps()} />
+              <FaCloudUploadAlt className="mx-auto text-3xl text-gray-400 mb-2" />
+              {uploading ? <p className="text-blue-600">Uploading to Cloudinary...</p> : <p>Drop images here or click to browse</p>}
             </div>
 
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
-                placeholder="A brief description of the product"
-              />
-            </div>
-
-            {/* Main Image URL */}
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Main Product Image URL</label>
-              <input
-                type="url"
-                name="mainImage"
-                value={formData.mainImage}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
-                placeholder="http://example.com/main-image.jpg"
-                required
-              />
-              {formData.mainImage && (
-                <div className="mt-4 border border-gray-300 rounded-lg overflow-hidden">
-                  <p className="text-sm text-gray-500 bg-gray-100 p-2 font-semibold">Main Image Preview:</p>
-                  <img src={formData.mainImage} alt="Main Product Preview" className="w-full h-auto object-contain p-2" />
-                </div>
-              )}
-            </div>
-
-            {/* Extra Images URLS */}
-            <div className="border-t border-gray-200 pt-6">
-              <label className="block text-gray-700 font-semibold mb-2">Extra Product Images (Optional)</label>
-              {formData.extraImages.map((image, index) => (
-                <div key={index} className="flex items-center space-x-2 mb-2">
-                  <input
-                    type="url"
-                    value={image}
-                    onChange={(e) => handleExtraImageChange(index, e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
-                    placeholder={`Extra Image URL ${index + 1}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeExtraImageInput(index)}
-                    className="text-red-500 hover:text-red-700 transition-colors p-2"
-                    aria-label="Remove image"
-                  >
-                    <FaTrash />
+            {/* Image Preview Grid */}
+            <div className="grid grid-cols-4 gap-4 mt-4">
+              {formData.images.map((url, index) => (
+                <div key={index} className="relative aspect-square rounded border overflow-hidden group">
+                  <img src={url} alt="preview" className="w-full h-full object-cover" />
+                  <button type="button" onClick={() => removeImage(index)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition">
+                    <FaTrash size={10} />
                   </button>
+                  {index === 0 && <span className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center">Main</span>}
                 </div>
               ))}
-              <button
-                type="button"
-                onClick={addExtraImageInput}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors flex items-center space-x-2 mt-2"
-              >
-                <FaPlus />
-                <span>Add Another Image</span>
-              </button>
-              
-              {/* Extra Image Previews */}
-              {formData.extraImages.length > 0 && (
-                <div className="mt-4 border border-gray-300 rounded-lg overflow-hidden p-2">
-                  <p className="text-sm text-gray-500 bg-gray-100 p-2 font-semibold">Extra Image Previews:</p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {formData.extraImages.filter(url => url.trim() !== "").map((url, index) => (
-                      <img key={index} src={url} alt={`Extra Product Preview ${index + 1}`} className="w-24 h-24 object-contain border border-gray-200 rounded-lg p-1" />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Price (INR)</label>
-              <input
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
-                placeholder="e.g., 99.50"
-                step="0.01"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Category</label>
-              <div className="relative">
-                <select
-                  name="categoryId"
-                  value={formData.categoryId}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors appearance-none pr-10"
-                  required
-                >
-                  <option value="" disabled>
-                    Select a category
-                  </option>
-                  {categories.map((c) => (
-                    <option key={c._id} value={c._id}>
-                      {c.name} {c.slug ? `(/${c.slug})` : ""}
-                    </option>
-                  ))}
-                </select>
-                <FaCheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none" />
-              </div>
-
-              <div className="flex items-center space-x-2 mt-4">
-                <input
-                  type="text"
-                  placeholder="Add new category"
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  className="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={addCategory}
-                  className="bg-green-600 text-white px-5 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center space-x-2"
-                >
-                  <FaPlus />
-                  <span>Add</span>
-                </button>
-              </div>
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-          >
-            {saving ? (
-              <>
-                <FaSpinner className="animate-spin" />
-                <span>{id ? "Updating..." : "Saving..."}</span>
-              </>
-            ) : (
-              <span>{id ? "Update Product" : "Add Product"}</span>
-            )}
+          <div>
+            <label className="block font-medium mb-1">Price (INR)</label>
+            <input type="number" className="w-full p-2 border rounded" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} required />
+          </div>
+
+          <div>
+            <label className="block font-medium mb-1">Category</label>
+            <select className="w-full p-2 border rounded" value={formData.categoryId} onChange={(e) => setFormData({...formData, categoryId: e.target.value})} required>
+              <option value="">Select Category</option>
+              {categories.map(cat => <option key={cat._id} value={cat._id}>{cat.name}</option>)}
+            </select>
+          </div>
+
+          <button type="submit" disabled={saving || uploading} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50">
+            {saving ? "Saving..." : id ? "Update Product" : "Create Product"}
           </button>
         </form>
       </div>
