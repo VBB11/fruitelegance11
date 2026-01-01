@@ -5,7 +5,7 @@ import { AuthContext } from '../context/AuthContext';
 import axios from 'axios';
 import { 
   FaPlus, FaMinus, FaTrashAlt, FaMapMarkerAlt, FaCheckCircle, FaChevronLeft, 
-  FaShippingFast, FaExclamationCircle 
+  FaShippingFast, FaExclamationCircle, FaLocationArrow, FaSpinner 
 } from 'react-icons/fa';
 import config from './config/config';
 
@@ -25,6 +25,9 @@ function Cart() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // New state for location detection
+  const [isLocating, setIsLocating] = useState(false);
+
   const [guestForm, setGuestForm] = useState({
     name: '',
     email: '',
@@ -38,6 +41,45 @@ function Cart() {
   const [guestFormError, setGuestFormError] = useState('');
   const [guestSubmitting, setGuestSubmitting] = useState(false);
 
+  // --- RESTORED LOCATION LOGIC ---
+  const handleLocateGuest = () => {
+    if (!navigator.geolocation) {
+      setGuestFormError("Geolocation is not supported by your browser.");
+      return;
+    }
+    setIsLocating(true);
+    setGuestFormError("");
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const response = await axios.get(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
+          );
+          const addr = response.data.address;
+          setGuestForm((prev) => ({
+            ...prev,
+            street: `${addr.house_number || ''} ${addr.road || addr.suburb || addr.neighbourhood || ''}`.trim(),
+            city: addr.city || addr.town || addr.village || "",
+            state: addr.state || "",
+            zip: addr.postcode || "",
+            country: addr.country || ""
+          }));
+          setGuestFormError("Location detected! Please review the details.");
+          setTimeout(() => setGuestFormError(""), 4000);
+        } catch (err) {
+          setGuestFormError("Could not detect address automatically.");
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (err) => {
+        setIsLocating(false);
+        setGuestFormError("Location access denied.");
+      }
+    );
+  };
+
   useEffect(() => {
     async function fetchAddresses() {
       try {
@@ -47,18 +89,14 @@ function Cart() {
           setLoading(false);
           return;
         }
-
         const res = await axios.get(`${config.backendUrl}/api/user/addresses`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-
         const normalized = res.data.map(addr => ({
           ...addr,
           _id: String(addr._id),
         }));
-
         setAddresses(normalized);
-
         const storedAddressId = localStorage.getItem('selectedAddressId');
         if (storedAddressId && normalized.find(addr => String(addr._id) === storedAddressId)) {
           setSelectedAddressId(storedAddressId);
@@ -67,7 +105,6 @@ function Cart() {
         } else {
           setSelectedAddressId(null);
         }
-
         setLoading(false);
       } catch (err) {
         console.error('Failed to fetch addresses', err);
@@ -89,9 +126,7 @@ function Cart() {
   }, [selectedAddressId]);
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * (item.qty || 1), 0);
-  
   const deliveryFee = cart.length === 0 ? 0 : (subtotal >= deliveryFeeThreshold ? 0 : deliveryFeeAmount);
-  
   const totalPrice = subtotal + deliveryFee;
 
   const selectedAddress = user 
@@ -111,7 +146,6 @@ function Cart() {
         alert('Please fill out all guest details.');
         return;
     }
-
     navigate('/checkout', { state: { address: selectedAddress } });
   };
 
@@ -139,10 +173,7 @@ function Cart() {
 
   const handleGuestSubmit = async (e) => {
     e.preventDefault();
-    if (!validateGuestForm()) {
-      return;
-    }
-
+    if (!validateGuestForm()) return;
     setGuestSubmitting(true);
     setGuestFormError('');
     try {
@@ -164,10 +195,8 @@ function Cart() {
       setAddresses([newAddress]);
       setSelectedAddressId(newAddress._id);
       localStorage.setItem('selectedAddressId', newAddress._id);
-      
       navigate('/checkout', { state: { address: newAddress } });
     } catch (err) {
-      console.error(err);
       setGuestFormError(err.response?.data?.error || 'Failed to complete guest checkout.');
     }
     setGuestSubmitting(false);
@@ -182,7 +211,6 @@ function Cart() {
   }
 
   const isProceedDisabled = cart.length === 0 || (user && !selectedAddressId);
-  // Removed `isCheckoutAsGuestDisabled` as it was redundant. `handleGuestSubmit` handles form validation.
 
   return (
     <div className="relative bg-[#f9f1dd] min-h-screen select-none py-16 px-4 sm:px-8">
@@ -224,7 +252,6 @@ function Cart() {
                         disabled={item.qty <= 1}
                         onClick={() => dispatch({ type: 'DECREMENT_QTY', payload: item._id })}
                         className={`p-2 rounded-full transition-colors ${item.qty <= 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-green-800 hover:bg-green-900 text-white'}`}
-                        aria-label={`Decrease quantity of ${item.name}`}
                       >
                         <FaMinus />
                       </button>
@@ -232,14 +259,12 @@ function Cart() {
                       <button
                         onClick={() => dispatch({ type: 'INCREMENT_QTY', payload: item._id })}
                         className="p-2 rounded-full bg-green-800 hover:bg-green-900 text-white transition-colors"
-                        aria-label={`Increase quantity of ${item.name}`}
                       >
                         <FaPlus />
                       </button>
                       <button
                         onClick={() => dispatch({ type: 'REMOVE_ITEM', payload: item._id })}
                         className="ml-4 p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors"
-                        aria-label={`Remove ${item.name} from cart`}
                       >
                         <FaTrashAlt size={20} />
                       </button>
@@ -289,94 +314,37 @@ function Cart() {
               </div>
             ) : (
               <div className="bg-white rounded-3xl shadow-md p-6">
-                <h2 className="text-2xl font-bold text-green-800 mb-4">Guest Checkout - Enter Your Details</h2>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-bold text-green-800">Guest Checkout</h2>
+                  <button 
+                    type="button"
+                    onClick={handleLocateGuest}
+                    disabled={isLocating}
+                    className="flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-800 transition disabled:opacity-50"
+                  >
+                    {isLocating ? <FaSpinner className="animate-spin" /> : <FaLocationArrow />}
+                    {isLocating ? "Detecting..." : "Locate Me"}
+                  </button>
+                </div>
                 {guestFormError && (
-                  <p className="mb-4 text-red-600 font-semibold">{guestFormError}</p>
+                  <p className={`mb-4 font-semibold text-sm ${guestFormError.includes('detected') ? 'text-green-600' : 'text-red-600'}`}>
+                    {guestFormError}
+                  </p>
                 )}
                 <form onSubmit={handleGuestSubmit} className="space-y-3">
-                  <input
-                    type="text"
-                    name="name"
-                    value={guestForm.name}
-                    onChange={handleGuestInputChange}
-                    placeholder="Full Name"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
-                    required
-                  />
-                  <input
-                    type="email"
-                    name="email"
-                    value={guestForm.email}
-                    onChange={handleGuestInputChange}
-                    placeholder="Email"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
-                    required
-                  />
-                  <input
-                    type="tel"
-                    name="mobile"
-                    value={guestForm.mobile}
-                    onChange={handleGuestInputChange}
-                    placeholder="Mobile Number"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
-                    required
-                  />
-                  <input
-                    type="text"
-                    name="street"
-                    value={guestForm.street}
-                    onChange={handleGuestInputChange}
-                    placeholder="Street"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
-                    required
-                  />
+                  <input type="text" name="name" value={guestForm.name} onChange={handleGuestInputChange} placeholder="Full Name" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent" required />
+                  <input type="email" name="email" value={guestForm.email} onChange={handleGuestInputChange} placeholder="Email" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent" required />
+                  <input type="tel" name="mobile" value={guestForm.mobile} onChange={handleGuestInputChange} placeholder="Mobile Number" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent" required />
+                  <input type="text" name="street" value={guestForm.street} onChange={handleGuestInputChange} placeholder="Street" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent" required />
                   <div className="grid grid-cols-2 gap-3">
-                    <input
-                      type="text"
-                      name="city"
-                      value={guestForm.city}
-                      onChange={handleGuestInputChange}
-                      placeholder="City"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
-                      required
-                    />
-                    <input
-                      type="text"
-                      name="state"
-                      value={guestForm.state}
-                      onChange={handleGuestInputChange}
-                      placeholder="State"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
-                      required
-                    />
+                    <input type="text" name="city" value={guestForm.city} onChange={handleGuestInputChange} placeholder="City" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent" required />
+                    <input type="text" name="state" value={guestForm.state} onChange={handleGuestInputChange} placeholder="State" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent" required />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <input
-                      type="text"
-                      name="zip"
-                      value={guestForm.zip}
-                      onChange={handleGuestInputChange}
-                      placeholder="ZIP Code"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
-                      required
-                    />
-                    <input
-                      type="text"
-                      name="country"
-                      value={guestForm.country}
-                      onChange={handleGuestInputChange}
-                      placeholder="Country"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent"
-                      required
-                    />
+                    <input type="text" name="zip" value={guestForm.zip} onChange={handleGuestInputChange} placeholder="ZIP Code" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent" required />
+                    <input type="text" name="country" value={guestForm.country} onChange={handleGuestInputChange} placeholder="Country" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent" required />
                   </div>
-                  <button
-                    type="submit"
-                    disabled={guestSubmitting}
-                    className={`w-full mt-4 bg-green-800 hover:bg-green-900 text-white px-6 py-3 rounded-full font-semibold text-lg transition-colors ${
-                      guestSubmitting ? 'opacity-60 cursor-not-allowed' : ''
-                    }`}
-                  >
+                  <button type="submit" disabled={guestSubmitting} className={`w-full mt-4 bg-green-800 hover:bg-green-900 text-white px-6 py-3 rounded-full font-semibold text-lg transition-colors ${guestSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}>
                     {guestSubmitting ? 'Processing...' : 'Checkout as Guest'}
                   </button>
                 </form>
@@ -386,32 +354,18 @@ function Cart() {
             <div className="bg-white rounded-3xl shadow-md p-6">
               <h2 className="text-2xl font-bold text-green-800 mb-4">Order Summary</h2>
               {cart.length > 0 && (
-                <div className={`p-4 rounded-lg flex items-center gap-2 mb-4 ${
-                  subtotal >= deliveryFeeThreshold ? 'bg-green-50 text-green-800' : 'bg-yellow-50 text-yellow-800'
-                }`}>
+                <div className={`p-4 rounded-lg flex items-center gap-2 mb-4 ${subtotal >= deliveryFeeThreshold ? 'bg-green-50 text-green-800' : 'bg-yellow-50 text-yellow-800'}`}>
                   {subtotal >= deliveryFeeThreshold ? (
-                    <>
-                      <FaShippingFast size={20} />
-                      <p className="font-semibold">Hooray! You've got free delivery.</p>
-                    </>
+                    <><FaShippingFast size={20} /><p className="font-semibold">Hooray! You've got free delivery.</p></>
                   ) : (
-                    <>
-                      <FaExclamationCircle size={20} />
-                      <p>Shop for <span className="font-semibold">₹{(deliveryFeeThreshold - subtotal).toFixed(2)}</span> more to grab a free delivery.</p>
-                    </>
+                    <><FaExclamationCircle size={20} /><p>Shop for <span className="font-semibold">₹{(deliveryFeeThreshold - subtotal).toFixed(2)}</span> more to grab a free delivery.</p></>
                   )}
                 </div>
               )}
               <div className="space-y-2 text-gray-700 mb-4">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span className="font-semibold">₹{subtotal.toFixed(2)}</span>
-                </div>
+                <div className="flex justify-between"><span>Subtotal:</span><span className="font-semibold">₹{subtotal.toFixed(2)}</span></div>
                 {cart.length > 0 && (
-                    <div className="flex justify-between">
-                        <span>Delivery Fee:</span>
-                        <span className="font-semibold">{deliveryFee === 0 ? 'Free' : `₹${deliveryFee.toFixed(2)}`}</span>
-                    </div>
+                    <div className="flex justify-between"><span>Delivery Fee:</span><span className="font-semibold">{deliveryFee === 0 ? 'Free' : `₹${deliveryFee.toFixed(2)}`}</span></div>
                 )}
               </div>
               <div className="border-t border-gray-200 pt-4 mt-4 flex justify-between items-center">
@@ -419,13 +373,7 @@ function Cart() {
                 <span className="text-2xl font-bold text-green-800">₹{totalPrice.toFixed(2)}</span>
               </div>
               {user ? (
-                <button
-                  onClick={handleProceed}
-                  className={`w-full mt-6 bg-green-800 text-white px-6 py-3 rounded-full font-semibold text-lg transition-colors ${
-                    isProceedDisabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-green-900'
-                  }`}
-                  disabled={isProceedDisabled}
-                >
+                <button onClick={handleProceed} className={`w-full mt-6 bg-green-800 text-white px-6 py-3 rounded-full font-semibold text-lg transition-colors ${isProceedDisabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-green-900'}`} disabled={isProceedDisabled}>
                   Proceed to Checkout
                 </button>
               ) : (
@@ -435,6 +383,7 @@ function Cart() {
           </div>
         </div>
       </div>
+      <style>{`.line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }`}</style>
     </div>
   );
 }
