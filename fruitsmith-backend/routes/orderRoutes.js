@@ -10,9 +10,6 @@ router.post('/', orderController.createOrder);
 router.get('/', orderController.getOrders);
 router.get('/:id', orderController.getOrderById);
 
-// NEW: Add the route for payment verification
-router.post('/verify-payment', orderController.verifyPaymentAndUpdateOrder);
-
 // New admin routes (protected for admins only)
 const adminRouter = express.Router();
 adminRouter.use(verifyToken, verifyAdmin);

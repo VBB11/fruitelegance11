@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
-import { FaArrowLeft, FaSpinner, FaBoxOpen, FaUser, FaTruck, FaShoppingCart, FaCreditCard, FaCalendarAlt } from "react-icons/fa";
+import { FaArrowLeft, FaSpinner, FaBoxOpen, FaUser, FaTruck, FaShoppingCart, FaCreditCard, FaCalendarAlt, FaCheckCircle, FaSave } from "react-icons/fa";
 import config from "../config/config";
 
 // --- Utility Functions ---
+const statusOptions = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled", "Refunded"];
 
 const statusColors = {
   Pending: "bg-yellow-500 text-white",
@@ -18,18 +19,15 @@ const statusColors = {
 const getStatusBadge = (status) => {
   const color = statusColors[status] || "bg-gray-300 text-gray-800";
   return (
-    <span 
-      className={`inline-block px-3 py-1 text-sm rounded-full font-bold shadow-md ${color}`}
-    >
+    <span className={`inline-block px-3 py-1 text-sm rounded-full font-bold shadow-md ${color}`}>
       {status}
     </span>
   );
 };
 
 // --- Helper Components ---
-
 const DetailCard = ({ title, icon: Icon, children }) => (
-  <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
+  <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100 h-full">
     <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
       <Icon className="text-green-600" />
       {title}
@@ -46,168 +44,177 @@ const DetailItem = ({ label, value, highlight = false, icon: Icon }) => (
     </div>
 );
 
-
-// --- Main Component ---
-
 function AdminOrderDetail({ token }) {
   const { orderId } = useParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
   const [error, setError] = useState("");
+  const [newStatus, setNewStatus] = useState("");
 
   useEffect(() => {
-    async function fetchOrder() {
-      setLoading(true);
-      try {
-        const res = await axios.get(`${config.backendUrl}/api/admin/orders/${orderId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setOrder(res.data);
-        setError("");
-      } catch (e) {
-        setError("Failed to load order details.");
-      }
-      setLoading(false);
-    }
-    if (token && orderId) {
-      fetchOrder();
-    }
+    fetchOrder();
   }, [orderId, token]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 text-gray-500">
-        <FaSpinner className="mr-3 animate-spin text-4xl text-green-600" /> 
-        <p className="mt-4 text-xl">Loading order data...</p>
-      </div>
-    );
+  async function fetchOrder() {
+    setLoading(true);
+    try {
+      const res = await axios.get(`${config.backendUrl}/api/admin/orders/${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setOrder(res.data);
+      setNewStatus(res.data.status);
+      setError("");
+    } catch (e) {
+      setError("Failed to load order details.");
+    }
+    setLoading(false);
   }
 
-  if (error || !order) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-10">
-        <FaBoxOpen className="text-6xl mb-4 text-red-500" />
-        <p className="text-xl font-semibold text-red-700">{error || "Order not found."}</p>
-        <Link to="/admin/orders" className="mt-8 text-green-600 hover:text-green-700 font-bold flex items-center p-3 rounded-lg border border-green-600 transition-colors">
-          <FaArrowLeft className="mr-2" /> Back to Orders List
-        </Link>
-      </div>
-    );
-  }
+  // --- NEW: UPDATE ORDER STATUS ---
+  const handleUpdateStatus = async () => {
+    setUpdating(true);
+    try {
+      await axios.put(
+        `${config.backendUrl}/api/admin/orders/${orderId}/status`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Refresh local order data
+      setOrder({ ...order, status: newStatus });
+      alert("Order status updated successfully!");
+    } catch (e) {
+      alert("Failed to update status. Ensure your backend route exists.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  if (loading) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+      <FaSpinner className="animate-spin text-4xl text-green-600" />
+      <p className="mt-4 text-xl text-gray-500">Loading order data...</p>
+    </div>
+  );
+
+  if (error || !order) return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-10">
+      <FaBoxOpen className="text-6xl mb-4 text-red-500" />
+      <p className="text-xl font-semibold text-red-700">{error || "Order not found."}</p>
+      <Link to="/admin/orders" className="mt-8 text-green-600 border border-green-600 p-3 rounded-lg"><FaArrowLeft className="inline mr-2"/>Back</Link>
+    </div>
+  );
 
   const { userId, shippingAddress, status, orderDate, totalAmount, items, paymentInfo } = order;
-  const paymentStatus = paymentInfo?.isPaid ? "Paid" : "Pending/Unpaid";
-  const paymentStatusColor = paymentInfo?.isPaid ? "bg-green-500" : "bg-red-500";
-
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-10">
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl p-6 md:p-10 space-y-8">
+      <div className="max-w-5xl mx-auto space-y-8">
         
-        {/* Header & Order ID */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b pb-4">
-          <div className="mb-4 sm:mb-0">
-            <h1 className="text-3xl font-extrabold text-gray-900">Order #{order._id.slice(0, 8)}...</h1>
-            <p className="text-sm text-gray-500 mt-1">Full ID: <span className="font-mono text-xs">{order._id}</span></p>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white p-6 rounded-xl shadow-md border border-gray-100">
+          <div>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">Order #{order._id.slice(-8).toUpperCase()}</h1>
+            <p className="text-sm text-gray-500">{new Date(orderDate).toLocaleString()}</p>
           </div>
-          <Link 
-            to="/admin/orders" 
-            className="text-white bg-gray-700 hover:bg-gray-800 flex items-center font-semibold px-4 py-2 rounded-lg transition-colors shadow-md"
-          >
-            <FaArrowLeft className="mr-2 text-sm" /> Manage Orders
+          <Link to="/admin/orders" className="mt-4 sm:mt-0 text-sm font-bold text-gray-600 flex items-center gap-2 hover:text-green-600 transition">
+            <FaArrowLeft /> Back to List
           </Link>
         </div>
 
-        {/* Top KPIs (Total & Status) */}
+        {/* --- VISUAL TIMELINE --- */}
+        <div className="bg-white p-8 rounded-xl shadow-md border border-gray-100 overflow-x-auto">
+          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6">Order Timeline</h3>
+          <div className="flex items-center justify-between min-w-[600px] relative">
+            {/* Timeline Line */}
+            <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 -translate-y-1/2 z-0"></div>
+            
+            {["Pending", "Processing", "Shipped", "Delivered"].map((step, idx) => {
+              const isActive = statusOptions.indexOf(status) >= statusOptions.indexOf(step);
+              return (
+                <div key={step} className="relative z-10 flex flex-col items-center">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border-4 ${isActive ? 'bg-green-600 border-green-200 text-white' : 'bg-white border-gray-200 text-gray-300'}`}>
+                    <FaCheckCircle />
+                  </div>
+                  <span className={`mt-2 text-xs font-bold ${isActive ? 'text-green-800' : 'text-gray-400'}`}>{step}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Status Update & Info KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            {/* Order Status */}
-            <div className="bg-gray-100 p-4 rounded-lg shadow-inner border-l-4 border-green-500">
-                <p className="text-sm text-gray-600 font-medium">Order Status</p>
-                <div className="mt-2">{getStatusBadge(status)}</div>
+          <div className="md:col-span-2 bg-white p-6 rounded-xl shadow-md border border-gray-100 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase">Change Status</p>
+              <select 
+                value={newStatus} 
+                onChange={(e) => setNewStatus(e.target.value)}
+                className="mt-2 block w-full p-2 bg-gray-50 border rounded-lg font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-green-500"
+              >
+                {statusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              </select>
             </div>
+            <button 
+              onClick={handleUpdateStatus}
+              disabled={updating || newStatus === status}
+              className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2"
+            >
+              {updating ? <FaSpinner className="animate-spin" /> : <FaSave />} Save Status
+            </button>
+          </div>
 
-            {/* Payment Status */}
-            <div className="bg-gray-100 p-4 rounded-lg shadow-inner border-l-4 border-gray-500">
-                <p className="text-sm text-gray-600 font-medium">Payment</p>
-                <span 
-                    className={`mt-2 inline-block px-3 py-1 text-sm rounded-full font-bold shadow-sm ${paymentStatusColor} text-white`}
-                >
-                    {paymentStatus}
-                </span>
+          <div className="bg-green-600 p-6 rounded-xl shadow-md text-white">
+            <p className="text-xs font-bold uppercase opacity-80">Total Revenue</p>
+            <p className="text-3xl font-black mt-1">₹{totalAmount?.toFixed(2)}</p>
+            <div className="mt-2 inline-block px-2 py-0.5 bg-white/20 rounded text-[10px] font-bold">
+              {paymentInfo?.isPaid ? "PAID" : "UNPAID"}
             </div>
-            
-            {/* Total Amount */}
-            <div className="bg-green-50 p-4 rounded-lg shadow-md border-l-4 border-green-600">
-                <p className="text-sm text-green-700 font-medium">Total Revenue</p>
-                <p className="text-3xl font-extrabold text-green-900 mt-1">
-                    ₹{totalAmount?.toFixed(2) || '0.00'}
-                </p>
-            </div>
+          </div>
         </div>
 
-
-        {/* Customer, Shipping, and Payment Details */}
+        {/* Customer & Shipping Details */}
         <div className="grid md:grid-cols-2 gap-6">
-            
-            {/* Customer Info */}
-            <DetailCard title="Customer Information" icon={FaUser}>
-                <DetailItem label="Customer Name" value={userId?.name || "N/A"} />
-                <DetailItem label="Email" value={userId?.email || "N/A"} />
-                <DetailItem label="Order Date" value={new Date(orderDate).toLocaleString()} icon={FaCalendarAlt} />
-            </DetailCard>
+          <DetailCard title="Customer Information" icon={FaUser}>
+            <DetailItem label="Name" value={userId?.name || "Guest"} />
+            <DetailItem label="Email" value={userId?.email || "N/A"} />
+            <DetailItem label="Phone" value={shippingAddress?.mobile || "N/A"} />
+          </DetailCard>
 
-            {/* Shipping & Payment */}
-            <div className="space-y-6">
-                
-                <DetailCard title="Shipping Address" icon={FaTruck}>
-                    <div className="text-gray-900 font-medium">{shippingAddress?.street}</div>
-                    <div className="text-gray-700">{shippingAddress?.city}, {shippingAddress?.state} {shippingAddress?.zip}</div>
-                    <div className="text-gray-700">{shippingAddress?.country}</div>
-                    <DetailItem label="Phone" value={shippingAddress?.mobile || "N/A"} />
-                </DetailCard>
-
-                <DetailCard title="Payment Details" icon={FaCreditCard}>
-                    <DetailItem label="Method" value={paymentInfo?.method || "N/A"} />
-                    <DetailItem label="Transaction ID" value={paymentInfo?.transactionId || "N/A"} />
-                    <DetailItem label="Total Paid" value={`₹${totalAmount?.toFixed(2) || '0.00'}`} highlight={true} />
-                </DetailCard>
-            </div>
+          <DetailCard title="Shipping Address" icon={FaTruck}>
+            <p className="font-bold text-gray-800">{shippingAddress?.street}</p>
+            <p className="text-gray-600">{shippingAddress?.city}, {shippingAddress?.state} {shippingAddress?.zip}</p>
+            <p className="text-gray-600">{shippingAddress?.country}</p>
+          </DetailCard>
         </div>
 
-        {/* Product Items Table */}
-        <DetailCard title="Products Ordered" icon={FaShoppingCart}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-gray-100 border-b border-gray-300">
-                  <tr>
-                    <th className="p-3 text-gray-700 font-bold text-sm uppercase tracking-wider">Product</th>
-                    <th className="p-3 text-gray-700 font-bold text-sm uppercase tracking-wider text-center">Qty</th>
-                    <th className="p-3 text-gray-700 font-bold text-sm uppercase tracking-wider text-right">Unit Price</th>
-                    <th className="p-3 text-gray-700 font-bold text-sm uppercase tracking-wider text-right">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {items?.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="p-4 text-center text-gray-500">
-                        No items found in this order.
-                      </td>
-                    </tr>
-                  ) : (
-                    items.map((item, index) => (
-                      <tr key={index} className="hover:bg-green-50 transition-colors">
-                        <td className="p-3 font-medium text-gray-800">{item.name || "Product Name"}</td>
-                        <td className="p-3 text-center">{item.qty}</td>
-                        <td className="p-3 text-right">₹{item.price?.toFixed(2)}</td>
-                        <td className="p-3 font-extrabold text-right text-green-700">₹{(item.qty * item.price).toFixed(2)}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-        </DetailCard>
+        {/* Product Items */}
+        <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+          <div className="p-4 bg-gray-50 border-b font-bold text-gray-700 flex items-center gap-2">
+            <FaShoppingCart className="text-green-600" /> Products Ordered
+          </div>
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-gray-100 text-gray-500 text-[10px] uppercase tracking-widest">
+                <th className="p-4">Item</th>
+                <th className="p-4 text-center">Qty</th>
+                <th className="p-4 text-right">Price</th>
+                <th className="p-4 text-right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {items?.map((item, idx) => (
+                <tr key={idx} className="hover:bg-gray-50">
+                  <td className="p-4 font-bold text-gray-800">{item.name}</td>
+                  <td className="p-4 text-center text-gray-600">{item.qty}</td>
+                  <td className="p-4 text-right text-gray-600">₹{item.price?.toFixed(2)}</td>
+                  <td className="p-4 text-right font-black text-green-700">₹{(item.qty * item.price).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
